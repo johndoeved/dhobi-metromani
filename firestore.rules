@@ -1,0 +1,262 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net - Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Help connection verification test path
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // --- REUSABLE SECURITY PRIMITIVES (Phase 3) ---
+    
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    
+    function incoming() { 
+      return request.resource.data; 
+    }
+    
+    function existing() { 
+      return resource.data; 
+    }
+    
+    function isSignedIn() { 
+      return request.auth != null; 
+    }
+
+    // Bootstrapped admin check using direct lookup & fallback runtime owner security email (Phase 4.3 & SKILL.md rules)
+    function isAdmin() { 
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email.matches('(?i)^rohitparmar708@gmail\\.com$')
+      ); 
+    }
+
+    // --- ENTITY COMPLIANCE VALIDATORS (Phase 2) ---
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'status', 'isVerified', 'membership'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 200
+        && (data.status == 'active' || data.status == 'blocked')
+        && data.isVerified is bool
+        && (data.membership == 'free' || data.membership == 'premium')
+        && (!data.keys().hasAny(['phone']) || (data.phone is string && data.phone.size() <= 30))
+        && (!data.keys().hasAny(['gender']) || (data.gender == 'male' || data.gender == 'female'))
+        && (!data.keys().hasAny(['religion']) || (data.religion is string && data.religion.size() <= 100))
+        && (!data.keys().hasAny(['caste']) || (data.caste is string && data.caste.size() <= 100))
+        && (!data.keys().hasAny(['age']) || (data.age is number && data.age >= 18 && data.age <= 120))
+        && (!data.keys().hasAny(['profilePhoto']) || (data.profilePhoto is string && data.profilePhoto.size() <= 1000));
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'role', 'createdAt'])
+        && data.keys().size() == 5
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 200
+        && data.name is string && data.name.size() <= 100
+        && (data.role == 'superadmin' || data.role == 'moderator')
+        && data.createdAt is string;
+    }
+
+    // 3. Chats Collection Match (and chat helpers can go before)
+    function isValidChat(data) {
+      return data.keys().hasAll(['chatId', 'participantIds'])
+        && data.chatId is string && data.chatId.size() <= 128
+        && data.participantIds is list && data.participantIds.size() == 2
+        && data.participantIds[0] is string && data.participantIds[1] is string
+        && (!data.keys().hasAny(['lastMessage']) || (data.lastMessage is string && data.lastMessage.size() <= 500));
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['messageId', 'chatId', 'senderId', 'receiverId', 'text', 'createdAt'])
+        && data.keys().size() == 6
+        && data.messageId is string && data.messageId.size() <= 128
+        && data.chatId is string && data.chatId.size() <= 128
+        && data.senderId is string && data.senderId.size() <= 128
+        && data.receiverId is string && data.receiverId.size() <= 128
+        && data.text is string && data.text.size() <= 1000
+        && data.createdAt is string;
+    }
+
+    function isValidSubscription(data) {
+      return data.keys().hasAll(['subscriptionId', 'userId', 'planName', 'amount', 'status', 'startDate', 'endDate'])
+        && data.subscriptionId is string && data.subscriptionId.size() <= 128
+        && data.userId is string && data.userId.size() <= 128
+        && data.planName is string && data.planName.size() <= 100
+        && data.amount is number
+        && (data.status == 'active' || data.status == 'expired');
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['reportId', 'reporterId', 'reportedUserId', 'type', 'details', 'status', 'createdAt'])
+        && data.keys().size() == 7
+        && data.reportId is string && data.reportId.size() <= 128
+        && data.reporterId is string && data.reporterId.size() <= 128
+        && data.reportedUserId is string && data.reportedUserId.size() <= 128
+        && (data.type == 'fake_profile' || data.type == 'abuse' || data.type == 'spam')
+        && data.details is string && data.details.size() <= 2000
+        && (data.status == 'pending' || data.status == 'resolved' || data.status == 'dismissed')
+        && data.createdAt is string;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['notificationId', 'title', 'body', 'target', 'createdAt'])
+        && data.notificationId is string && data.notificationId.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.body is string && data.body.size() <= 1000
+        && (data.target == 'all' || data.target == 'user')
+        && (!data.keys().hasAny(['targetUserId']) || (data.targetUserId is string && data.targetUserId.size() <= 128))
+        && data.createdAt is string;
+    }
+
+    // --- COHESIVE SECURE COLLECTIONS MATCHES ---
+
+    // 1. Users Collection Match
+    match /users/{userId} {
+      // Direct Single-Document Path Variable Hardening
+      allow get: if isSignedIn() && (isValidId(userId) && (request.auth.uid == userId || isAdmin()));
+      
+      // Isolated list query to prevent scraping of unauthorized profile entries (Pillar 8)
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() 
+        && isValidId(userId) 
+        && request.auth.uid == userId 
+        && isValidUser(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().isVerified == false         // Users can't self-verify during create
+        && incoming().status == 'active'          // Must start active
+        && incoming().membership == 'free'        // Must start free
+        && incoming().createdAt is string;
+
+      allow update: if (isSignedIn() && isValidId(userId) && (
+        // Case A: Standard Owner profiles adjustments
+        (request.auth.uid == userId 
+          && isValidUser(incoming())
+          && incoming().uid == existing().uid
+          && incoming().email == existing().email  // Cannot modify registered details
+          // Standard users cannot alter administrative locks
+          && incoming().isVerified == existing().isVerified
+          && incoming().status == existing().status
+          && incoming().membership == existing().membership
+          && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'gender', 'religion', 'caste', 'age', 'profilePhoto', 'updatedAt'])
+        ) ||
+        // Case B: Administrative overrides
+        (isAdmin() 
+          && isValidUser(incoming())
+          && incoming().uid == existing().uid
+          && incoming().diff(existing()).affectedKeys().hasAny(['isVerified', 'status', 'membership', 'updatedAt'])
+        )
+      ));
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 2. Admins Collection Match
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if isAdmin();
+      
+      // Admins cannot self-provision; must be assigned via existing admin or pre-approved logic
+      allow create: if isAdmin() && isValidId(adminId) && isValidAdminRecord(incoming());
+      allow update: if isAdmin() && isValidId(adminId) && isValidAdminRecord(incoming());
+      allow delete: if isAdmin() && isValidId(adminId);
+    }
+
+    // 3. Chats Collection Match
+    match /chats/{chatId} {
+      // Must be a participant or admin
+      allow get: if isSignedIn() && isValidId(chatId) && (existing().participantIds.hasAny([request.auth.uid]) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.participantIds.hasAny([request.auth.uid]) || isAdmin());
+
+      allow create: if isSignedIn() 
+        && isValidId(chatId) 
+        && isValidChat(incoming())
+        && incoming().participantIds.hasAny([request.auth.uid]);
+
+      allow update: if isSignedIn() && isValidId(chatId) && (
+        (incoming().participantIds == existing().participantIds 
+          && isValidChat(incoming())
+          && (incoming().participantIds.hasAny([request.auth.uid]) || isAdmin())
+          && incoming().diff(existing()).affectedKeys().hasOnly(['lastMessage', 'lastMessageAt'])
+        )
+      );
+
+      allow delete: if isAdmin() && isValidId(chatId);
+    }
+
+    // 4. Messages Collection Match
+    match /messages/{messageId} {
+      allow get: if isSignedIn() 
+        && isValidId(messageId) 
+        && (existing().senderId == request.auth.uid || existing().receiverId == request.auth.uid || isAdmin());
+      
+      allow list: if isSignedIn() 
+        && (resource.data.senderId == request.auth.uid || resource.data.receiverId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn()
+        && isValidId(messageId)
+        && isValidMessage(incoming())
+        // Enforce sender integrity
+        && incoming().senderId == request.auth.uid
+        // Verify relationship sync: Chat exists and current user is in it (Atomicity Gate)
+        && exists(/databases/$(database)/documents/chats/$(incoming().chatId))
+        && get(/databases/$(database)/documents/chats/$(incoming().chatId)).data.participantIds.hasAny([request.auth.uid]);
+
+      allow update: if false; // Messages are immutable
+      allow delete: if isAdmin() && isValidId(messageId);
+    }
+
+    // 5. Subscriptions Collection Match
+    match /subscriptions/{subscriptionId} {
+      allow get: if isSignedIn() && isValidId(subscriptionId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      // Only admins can create or edit subscriptions directly (e.g., through dashboard management)
+      allow create: if isAdmin() && isValidId(subscriptionId) && isValidSubscription(incoming());
+      allow update: if isAdmin() && isValidId(subscriptionId) && isValidSubscription(incoming())
+        && incoming().userId == existing().userId
+        && incoming().diff(existing()).affectedKeys().hasOnly(['planName', 'amount', 'status', 'endDate']);
+      allow delete: if isAdmin() && isValidId(subscriptionId);
+    }
+
+    // 6. Reports Collection Match
+    match /reports/{reportId} {
+      allow get: if isSignedIn() && isValidId(reportId) && (existing().reporterId == request.auth.uid || isAdmin());
+      allow list: if isAdmin(); // Standard users cannot browse reports queue
+
+      allow create: if isSignedIn()
+        && isValidId(reportId)
+        && isValidReport(incoming())
+        && incoming().reporterId == request.auth.uid // Authenticity
+        && incoming().status == 'pending'; // Report must start as pending
+
+      allow update: if isAdmin()
+        && isValidId(reportId)
+        && isValidReport(incoming())
+        && incoming().reporterId == existing().reporterId
+        && incoming().reportedUserId == existing().reportedUserId
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']); // Admins can only resolve or dismiss
+
+      allow delete: if false; // Reports must be preserved as historical log
+    }
+
+    // 7. Notifications Collection Match
+    match /notifications/{notificationId} {
+      allow get: if isSignedIn() && isValidId(notificationId) && (existing().target == 'all' || existing().targetUserId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.target == 'all' || resource.data.targetUserId == request.auth.uid || isAdmin());
+
+      allow create: if isAdmin() && isValidId(notificationId) && isValidNotification(incoming());
+      allow update: if isAdmin() && isValidId(notificationId) && isValidNotification(incoming());
+      allow delete: if isAdmin() && isValidId(notificationId);
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile in Dhobi Metromani matrimony application",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique Google Auth UID of the user" },
+        "name": { "type": "string", "description": "Display name of the user" },
+        "email": { "type": "string", "description": "User's email matching Firebase Auth" },
+        "phone": { "type": "string", "description": "User's contact number" },
+        "gender": { "type": "string", "enum": ["male", "female"], "description": "Gender of the user" },
+        "religion": { "type": "string", "description": "User's religion" },
+        "caste": { "type": "string", "description": "User's caste" },
+        "age": { "type": "number", "description": "Age of the user" },
+        "profilePhoto": { "type": "string", "description": "URL of user icon/photo" },
+        "status": { "type": "string", "enum": ["active", "blocked"], "description": "Status of the user account" },
+        "isVerified": { "type": "boolean", "description": "Whether the matrimony profile is verified by admin" },
+        "membership": { "type": "string", "enum": ["free", "premium"], "description": "Membership status of the user" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Account last update timestamp" }
+      },
+      "required": ["uid", "name", "email", "status", "isVerified", "membership"]
+    },
+    "Admin": {
+      "title": "Admin Record",
+      "description": "System administrators authorized to manage the dashboard",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "UID of the admin corresponding to Firebase Auth" },
+        "email": { "type": "string", "description": "Admin's registered email address" },
+        "name": { "type": "string", "description": "Full name of the admin" },
+        "role": { "type": "string", "enum": ["superadmin", "moderator"], "description": "Admin privileges level" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp of role assignment" }
+      },
+      "required": ["uid", "email", "name", "role", "createdAt"]
+    },
+    "Chat": {
+      "title": "Chat Session",
+      "description": "Matrimonial match conversation session details",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string", "description": "The unique ID of the conversation" },
+        "participantIds": { "type": "array", "description": "UID list of the two communicating users" },
+        "lastMessage": { "type": "string", "description": "Text of the most recent message exchanged" },
+        "lastMessageAt": { "type": "string", "format": "date-time", "description": "Timestamp of the last message sent" }
+      },
+      "required": ["chatId", "participantIds"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Individual messages sent within a chat session",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string", "description": "The unique ID of the message" },
+        "chatId": { "type": "string", "description": "Reference to the active chat session" },
+        "senderId": { "type": "string", "description": "UID of user who sent this message" },
+        "receiverId": { "type": "string", "description": "UID of the user who received this message" },
+        "text": { "type": "string", "description": "The textual body of the message" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp of message" }
+      },
+      "required": ["messageId", "chatId", "senderId", "receiverId", "text", "createdAt"]
+    },
+    "Subscription": {
+      "title": "Premium Subscription Record",
+      "description": "User tier subscription state and payment tracking",
+      "type": "object",
+      "properties": {
+        "subscriptionId": { "type": "string", "description": "Unique key representing paid subscription" },
+        "userId": { "type": "string", "description": "UID of purchasing user" },
+        "planName": { "type": "string", "description": "Name of premium tier package" },
+        "amount": { "type": "number", "description": "Amount paid in INR/USD" },
+        "status": { "type": "string", "enum": ["active", "expired"], "description": "Current authorization status" },
+        "startDate": { "type": "string", "format": "date-time", "description": "Activation timestamp" },
+        "endDate": { "type": "string", "format": "date-time", "description": "Expiration timestamp" },
+        "paymentMethod": { "type": "string", "description": "System used for checkout" }
+      },
+      "required": ["subscriptionId", "userId", "planName", "amount", "status", "startDate", "endDate"]
+    },
+    "Report": {
+      "title": "Abuse or Spam Report",
+      "description": "User flagged for inappropriate profiles, scam, or abuse",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string", "description": "Individual tracking code of the complaint" },
+        "reporterId": { "type": "string", "description": "UID of complainant" },
+        "reportedUserId": { "type": "string", "description": "UID of reported account" },
+        "type": { "type": "string", "enum": ["fake_profile", "abuse", "spam"], "description": "Classification profile of report" },
+        "details": { "type": "string", "description": "Plain text explanation of flagged behavior" },
+        "status": { "type": "string", "enum": ["pending", "resolved", "dismissed"], "description": "Current lifecycle status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Post timestamp of user complaints" }
+      },
+      "required": ["reportId", "reporterId", "reportedUserId", "type", "details", "status", "createdAt"]
+    },
+    "Notification": {
+      "title": "System Announcement",
+      "description": "A push metadata announcement broadcasts",
+      "type": "object",
+      "properties": {
+        "notificationId": { "type": "string", "description": "Individual push payload reference" },
+        "title": { "type": "string", "description": "Title text of the notification" },
+        "body": { "type": "string", "description": "Body paragraph content of the message" },
+        "target": { "type": "string", "enum": ["all", "user"], "description": "Scope target selector" },
+        "targetUserId": { "type": "string", "description": "UID of targeted individual if single scope" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["notificationId", "title", "body", "target", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Provides matrimonial matches, profiles, and basic verification attributes"
+    },
+    "admins/{adminId}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Grants access to authorized personnel to view user data & reports"
+    },
+    "chats/{chatId}": {
+      "schema": { "$ref": "#/entities/Chat" },
+      "description": "Active matrimonial match messaging rooms"
+    },
+    "messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages indexed for chat feeds and real-time conversation views"
+    },
+    "subscriptions/{subscriptionId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "Premium tier purchase history or active subscriptions log"
+    },
+    "reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Dispute queues submitted by users regarding malicious behaviors"
+    },
+    "notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "System-wide broadcasts or localized mobile pushes triggered"
+    }
+  }
+}
