@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: dhobi-metromani
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        value: dhobi_metromani_secret_key_12345
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: PORT
+        generateValue: false
+        value: "10000"
