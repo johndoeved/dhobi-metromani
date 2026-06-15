@@ -31,7 +31,7 @@ var import_jsonwebtoken = __toESM(require("jsonwebtoken"), 1);
 var import_nodemailer = __toESM(require("nodemailer"), 1);
 var import_fs = __toESM(require("fs"), 1);
 import_dotenv.default.config();
-var PORT = 3e3;
+var PORT = parseInt(process.env.PORT || "3000", 10);
 var JWT_SECRET = process.env.JWT_SECRET || "default_jwt_secret_key_98765";
 var DB_FILE = import_path.default.join(process.cwd(), "db.json");
 var DEFAULT_USERS = [
@@ -338,7 +338,7 @@ var NodemailerEmailProvider = class {
       </body>
       </html>
     `;
-    if (this.transporter && process.env.SMTP_USER !== "test@gmail.com") {
+    if (this.transporter) {
       try {
         await this.transporter.sendMail({
           from,
@@ -468,8 +468,7 @@ async function startServer() {
       const sentViaSmtp = await emailProvider.sendOtp(cleanEmail, otp);
       return res.status(200).json({
         success: true,
-        message: sentViaSmtp ? "OTP sent successfully" : "OTP logged to console (Fallback Mode)",
-        otp: sentViaSmtp ? void 0 : otp
+        message: sentViaSmtp ? "OTP sent successfully" : "OTP logged to console (Fallback Mode)"
       });
     } catch (error) {
       console.error("[AuthService] Error sending OTP:", error);
