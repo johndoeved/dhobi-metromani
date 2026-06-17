@@ -524,7 +524,19 @@ class NodemailerEmailProvider implements EmailProvider {
     const from = process.env.SMTP_FROM || 'Dhobi Matrimony <dhobimetromany@gmail.com>';
     if (this.transporter && process.env.SMTP_USER !== 'test@gmail.com') {
       try {
-        await this.transporter.sendMail({ from, to, subject, text });
+        await this.transporter.sendMail({
+          from,
+          to,
+          subject,
+          text,
+          priority: 'high',
+          headers: {
+            'X-Priority': '1',
+            'X-MSMail-Priority': 'High',
+            'Importance': 'high',
+            'Precedence': 'transactional'
+          }
+        });
         console.log(`[EmailService] Email sent successfully to ${to}`);
         return true;
       } catch (err) {
@@ -625,8 +637,15 @@ class NodemailerEmailProvider implements EmailProvider {
           from,
           to: email,
           subject,
-          text: `Hello,\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this code, please ignore this email.\n\nRegards,\nDhobi Matrimony`,
+          text: `Hello,\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this code, please ignore this email.\n\nRegards,\nDhobi Matrimony Security Team`,
           html,
+          priority: 'high',
+          headers: {
+            'X-Priority': '1',
+            'X-MSMail-Priority': 'High',
+            'Importance': 'high',
+            'Precedence': 'transactional'
+          }
         });
         console.log(`[EmailService] OTP email sent successfully to ${email}`);
         return true;
