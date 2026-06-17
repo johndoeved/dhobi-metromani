@@ -435,7 +435,20 @@ class LocalUserDb {
 
 let userDb;
 if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI).then(() => console.log('[MongoDB] Connected successfully')).catch(err => console.error('[MongoDB] Error:', err));
+  mongoose.connect(process.env.MONGODB_URI).then(async () => {
+    console.log('[MongoDB] Connected successfully');
+    try {
+      // Force sync of rebranded admin credentials
+      await AdminSettings.findOneAndUpdate(
+        { key: 'admin_credentials' },
+        { value: { email: 'admin@dhobimatrimony.com', password: 'DhobiMatrimony@Admin#2026!' } },
+        { upsert: true }
+      );
+      console.log('[MongoDB] Admin settings synchronized.');
+    } catch (e) {
+      console.error('[MongoDB] Failed to sync admin credentials:', e);
+    }
+  }).catch(err => console.error('[MongoDB] Error:', err));
   userDb = new MongoUserDb();
 } else {
   console.log('[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.');
