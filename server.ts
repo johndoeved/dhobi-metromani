@@ -486,6 +486,7 @@ setInterval(cleanExpiredOtps, 60 * 1000);
 
 interface EmailProvider {
   sendOtp(email: string, otp: string): Promise<boolean>;
+  sendEmail(to: string, subject: string, text: string): Promise<boolean>;
   reinitTransporter(): void;
 }
 
@@ -517,6 +518,21 @@ class NodemailerEmailProvider implements EmailProvider {
 
   reinitTransporter() {
     this.init();
+  }
+
+  async sendEmail(to: string, subject: string, text: string): Promise<boolean> {
+    const from = process.env.SMTP_FROM || 'Dhobi Matrimony <dhobimetromany@gmail.com>';
+    if (this.transporter && process.env.SMTP_USER !== 'test@gmail.com') {
+      try {
+        await this.transporter.sendMail({ from, to, subject, text });
+        console.log(`[EmailService] Email sent successfully to ${to}`);
+        return true;
+      } catch (err) {
+        console.warn(`[EmailService] sendMail failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    console.log(`[EmailService:CONSOLE] To: ${to} | Subject: ${subject} | Body: ${text}`);
+    return true;
   }
 
   async sendOtp(email: string, otp: string): Promise<boolean> {
@@ -1287,9 +1303,8 @@ async function startServer() {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required.' });
     
-    const adminCreds = await userDb.getAdminCredentials();
-    if (email.trim().toLowerCase() !== adminCreds.email.toLowerCase()) {
-      // Return a vague message for security, or just success so they don't brute force emails
+    // Use hardcoded fallback credentials (no MongoDB dependency)
+    if (email.trim().toLowerCase() !== ADMIN_FALLBACK_EMAIL.toLowerCase()) {
       return res.status(400).json({ error: 'Invalid admin email.' });
     }
 
@@ -1327,15 +1342,23 @@ async function startServer() {
     res.json({ success: true, message: 'Admin credentials updated successfully.' });
   });
 
-  app.get('/api/auth/me', authenticateToken, (req: AuthenticatedRequest, res) => {
-    const user = userDb.findById(req.user!.uid);
-    if (!user) {
-      if (req.user!.uid === 'admin') {
-        return res.json({ success: true, user: { uid: 'admin', name: 'Admin', isAdmin: true, status: 'approved' } });
-      }
-      return res.status(404).json({ success: false, message: 'Candidate profile not found.' });
+  app.get('/api/auth/me', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    // Admin shortcut - no DB needed
+    if (req.user!.uid === 'admin') {
+      return res.json({ success: true, user: { uid: 'admin', name: 'Admin', isAdmin: true, status: 'approved' } });
     }
-    res.json({ success: true, user });
+    try {
+      const user = await Promise.race([
+        userDb.findById(req.user!.uid),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+      ]);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'Candidate profile not found.' });
+      }
+      res.json({ success: true, user });
+    } catch (e) {
+      return res.status(503).json({ success: false, message: 'Database unavailable. Please try again.' });
+    }
   });
 
   // Log out from current device
