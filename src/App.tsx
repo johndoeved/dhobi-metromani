@@ -1780,7 +1780,7 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
       }
       if (msg.includes("permission") || msg.includes("denied")) {
         showToast(
-          "Camera permission denied. Please allow camera access in your device Settings → Apps → Dhobi Metromany → Permissions.",
+          "Camera permission denied. Please allow camera access in your device Settings → Apps → Dhobi Matrimony → Permissions.",
           "error"
         );
       } else if (msg.includes("Camera is not available") || msg.includes("No camera")) {
@@ -2033,7 +2033,7 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
       
       ctx.fillStyle = "#ffffff";
       ctx.font = "bold 14px sans-serif";
-      ctx.fillText("GOVERNMENT OF METROMANI", 15, 26);
+      ctx.fillText("DHOBI MATRIMONY VERIFIED ID", 15, 26);
       
       ctx.fillStyle = C.text;
       ctx.font = "bold 13px sans-serif";
@@ -4268,7 +4268,7 @@ function AdminSessions({ isMobile, users }) {
   };
 
   const getUserDetails = (uid) => {
-    if (uid === "admin") return { name: "Admin", email: "admin@dhobimetromani.com" };
+    if (uid === "admin") return { name: "Admin", email: "admin@dhobimatrimony.com" };
     const user = users.find(u => u.uid === uid);
     return user ? { name: user.name, email: user.email } : { name: `Unknown (${uid})`, email: "" };
   };
@@ -4867,7 +4867,7 @@ function AdminHelp() {
   return (
     <div>
       <div style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>ℹ️ Help & About</div>
-      <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>Administrator guide and support contacts for the Dhobi Metromani platform.</div>
+      <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>Administrator guide and support contacts for the Dhobi Matrimony platform.</div>
 
       {/* ── Contact Cards ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 28 }}>

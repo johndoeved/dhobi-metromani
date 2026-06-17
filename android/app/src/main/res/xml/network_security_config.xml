@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow all HTTPS connections to Vercel backend (production) -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">dhobi-samaj-metromany.vercel.app</domain>
+    </domain-config>
+    <!-- Fallback config (allows cleartext locally for debugging if needed) -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

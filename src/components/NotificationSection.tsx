@@ -8,6 +8,9 @@ import { Send, BellRing, Users, User, ArrowUpRight, CheckCircle2 } from 'lucide-
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { SystemNotification } from '../types';
+import { Capacitor } from '@capacitor/core';
+
+const API_BASE_URL = Capacitor.isNativePlatform() ? "https://dhobi-samaj-metromany.vercel.app" : "";
 
 interface NotificationSectionProps {
   notifications: SystemNotification[];
@@ -60,7 +63,7 @@ export default function NotificationSection({ notifications }: NotificationSecti
       await setDoc(doc(db, 'notifications', notificationId), payload);
 
       // 2. Fire full-stack backend endpoint and output returned logs info (Pillar 6 Backend integration)
-      const res = await fetch('/api/send-notification', {
+      const res = await fetch(API_BASE_URL + '/api/send-notification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
