@@ -954,7 +954,8 @@ export const downloadBioDataPdf = async (user: any, options: { template?: string
   const startPhotoY = y;
   let photoBlockHeight = 0;
   if (showPhoto) {
-    const photosToRender = Array.isArray(user.photos) && user.photos.length > 0 ? user.photos : user.profilePhoto ? [user.profilePhoto] : [];
+    const firstPhoto = Array.isArray(user.photos) && user.photos.length > 0 ? user.photos[0] : user.profilePhoto;
+    const photosToRender = firstPhoto ? [firstPhoto] : [];
     if (photosToRender.length > 0) {
       try {
         const photoWidth = photosToRender.length === 1 ? 38 : 30;
@@ -1952,8 +1953,8 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
 
       if (!idDetection) {
         setIsScanning(false);
-        setScanError("❌ No Face Found in ID: No face photo was detected in your uploaded ID document. Please upload a clear, unobstructed scan where your face photo is clearly visible.");
-        showToast("No face detected in ID photo!", "error");
+        f("governmentIdUrl", dataUrl);
+        showToast("⚠️ ID uploaded. Face not detected in ID photo. Manual verification pending by Admin.", "warning");
         return;
       }
 
@@ -1968,8 +1969,8 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
 
       if (!profileDetection) {
         setIsScanning(false);
-        setScanError("❌ Face Not Detected in Profile Photo: Could not detect a clear face in your profile photo. Please upload a front-facing, well-lit profile photograph.");
-        showToast("No face detected in profile photo!", "error");
+        f("governmentIdUrl", dataUrl);
+        showToast("⚠️ ID uploaded. Face not detected in profile photo. Manual verification pending by Admin.", "warning");
         return;
       }
 
@@ -1987,8 +1988,8 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
 
       if (distance > MATCH_THRESHOLD) {
         setIsScanning(false);
-        setScanError(`❌ Face Mismatch (${confidence}% similarity): The face in your ID does not match your profile photo sufficiently. Please ensure both photos show the same person clearly.`);
-        showToast(`Face mismatch detected! Similarity: ${confidence}%`, "error");
+        f("governmentIdUrl", dataUrl);
+        showToast(`⚠️ ID uploaded. Face match confidence low (${confidence}%). Manual verification pending by Admin.`, "warning");
         return;
       }
 
@@ -2074,7 +2075,17 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
   };
 
   const next = () => {
-    if (step === 0 && (!form.name || !form.dob)) { showToast("Please fill Name and Date of Birth", "error"); return; }
+    if (step === 0) {
+      if (!form.name || !form.dob) {
+        showToast("Please fill Name and Date of Birth", "error");
+        return;
+      }
+      const ageVal = Number(calcAge(form.dob));
+      if (!isNaN(ageVal) && ageVal < 18) {
+        showToast("Age Restriction: You must be 18 or older to register.", "error");
+        return;
+      }
+    }
     if (step === 4 && !form.location) { showToast("Please fill City, State location", "error"); return; }
     if (step === 4) {
       // Validate 4 photos

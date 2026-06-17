@@ -984,9 +984,9 @@ async function startServer() {
   });
 
   // Get current user's own profile (for live status sync)
-  app.get('/api/users/me', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.get('/api/users/me', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const uid = req.user!.uid;
-    const user = userDb.findById(uid);
+    const user = await userDb.findById(uid);
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
     }
@@ -994,17 +994,17 @@ async function startServer() {
   });
 
 
-  app.get('/api/users', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.get('/api/users', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const callerId = req.user!.uid;
     const callerRole = req.user!.role;
-    const allUsers = userDb.getAll();
+    const allUsers = await userDb.getAll();
 
     // Logged in as Admin: Return everything
     if (callerRole === 'admin') {
       return res.json({ success: true, users: allUsers });
     }
 
-    const callerUser = userDb.findById(callerId);
+    const callerUser = await userDb.findById(callerId);
     const callerBlocked = callerUser?.blockedUsers || [];
 
     // Logged in as Candidate: Filter visible profiles (approved status only, except self)
@@ -1017,13 +1017,15 @@ async function startServer() {
       return true;
     });
 
+    const interests = await userDb.getInterests();
+
     const sanitizedUsers = visibleUsers.map(u => {
       if (u.uid === callerId) {
         return u; // Return full profile of oneself
       }
 
       // Check for an active mutual accepted interest
-      const activeConsent = userDb.getInterests().some(i => 
+      const activeConsent = interests.some(i => 
         i.status === 'accepted' && 
         ((i.senderId === callerId && i.receiverId === u.uid) || (i.senderId === u.uid && i.receiverId === callerId))
       );
@@ -1046,7 +1048,7 @@ async function startServer() {
   });
 
   // Create or register new user profile
-  app.post('/api/users/register', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/users/register', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const rawUserData = req.body;
     
     if (!rawUserData.email || !rawUserData.uid) {
@@ -1064,13 +1066,13 @@ async function startServer() {
       return res.status(403).json({ error: 'You must be at least 18 years old to use this service.' });
     }
     const sanitizedUserData = sanitizeUserData(rawUserData);
-    userDb.create(sanitizedUserData);
+    await userDb.create(sanitizedUserData);
 
     // Audit log
-    userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: new Date().toISOString(), userId: rawUserData.uid, userEmail: rawUserData.email, action: 'PROFILE_REGISTERED', details: `New profile created for ${rawUserData.name || rawUserData.email}`, ip: (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown' });
+    await userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: new Date().toISOString(), userId: rawUserData.uid, userEmail: rawUserData.email, action: 'PROFILE_REGISTERED', details: `New profile created for ${rawUserData.name || rawUserData.email}`, ip: (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown' });
 
     // Admin notification
-    userDb.addNotification({ id: `n_${Date.now()}`, timestamp: new Date().toISOString(), type: 'new_registration', userId: rawUserData.uid, userName: rawUserData.name || rawUserData.email, userEmail: rawUserData.email, summary: `New registration: ${rawUserData.name || rawUserData.email}`, details: `Gender: ${rawUserData.gender || 'N/A'} | Age: ${rawUserData.age || 'N/A'} | Location: ${rawUserData.location || 'N/A'}`, read: false });
+    await userDb.addNotification({ id: `n_${Date.now()}`, timestamp: new Date().toISOString(), type: 'new_registration', userId: rawUserData.uid, userName: rawUserData.name || rawUserData.email, userEmail: rawUserData.email, summary: `New registration: ${rawUserData.name || rawUserData.email}`, details: `Gender: ${rawUserData.gender || 'N/A'} | Age: ${rawUserData.age || 'N/A'} | Location: ${rawUserData.location || 'N/A'}`, read: false });
 
     // Send admin email
     sendAdminEmail(
@@ -1090,7 +1092,7 @@ async function startServer() {
     res.json({ success: true, user: sanitizedUserData });
   });
 
-  app.post('/api/users/update', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/users/update', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { uid, updates, changedFields } = req.body;
     if (!uid || !updates) {
       return res.status(400).json({ error: 'Missing uid or updates' });
@@ -1108,11 +1110,11 @@ async function startServer() {
       return res.status(403).json({ error: 'You must be at least 18 years old to use this service.' });
     }
     const sanitizedUpdates = sanitizeUserData(updates);
-    const targetUser = userDb.findById(uid);
-    const updated = userDb.update(uid, sanitizedUpdates);
+    const targetUser = await userDb.findById(uid);
+    const updated = await userDb.update(uid, sanitizedUpdates);
 
     if (updates.status === 'blocked') {
-      userDb.revokeAllSessions(uid);
+      await userDb.revokeAllSessions(uid);
     }
 
     if (updated && targetUser) {
@@ -1121,12 +1123,12 @@ async function startServer() {
 
       // Audit log
       const fieldsDesc = changedFields ? changedFields.map((f: any) => `${f.field}: "${f.oldValue}" → "${f.newValue}"`).join(', ') : Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
-      userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: new Date().toISOString(), userId: uid, userEmail: targetUser.email, action: isUserSelfEdit ? 'PROFILE_UPDATED_BY_USER' : 'PROFILE_UPDATED_BY_ADMIN', details: fieldsDesc, ip: (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown' });
+      await userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: new Date().toISOString(), userId: uid, userEmail: targetUser.email, action: isUserSelfEdit ? 'PROFILE_UPDATED_BY_USER' : 'PROFILE_UPDATED_BY_ADMIN', details: fieldsDesc, ip: (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown' });
 
       if (isUserSelfEdit && changedFields && changedFields.length > 0) {
         // Admin notification for user-initiated updates
         const changedSummary = changedFields.map((f: any) => `${f.field} changed from "${f.oldValue}" to "${f.newValue}"`).join('\n');
-        userDb.addNotification({ id: `n_${Date.now()}`, timestamp: new Date().toISOString(), type: 'profile_update', userId: uid, userName: targetUser.name || targetUser.email, userEmail: targetUser.email, summary: `Profile updated by ${targetUser.name || targetUser.email}`, details: changedSummary, read: false, changedFields });
+        await userDb.addNotification({ id: `n_${Date.now()}`, timestamp: new Date().toISOString(), type: 'profile_update', userId: uid, userName: targetUser.name || targetUser.email, userEmail: targetUser.email, summary: `Profile updated by ${targetUser.name || targetUser.email}`, details: changedSummary, read: false, changedFields });
 
         const tableRows = changedFields.map((f: any) => `<tr><td><strong>${f.field}</strong></td><td style="color:#cc0000;">${f.oldValue || '(empty)'}</td><td style="color:#006600;">${f.newValue || '(empty)'}</td></tr>`).join('');
         sendAdminEmail(
@@ -1160,7 +1162,7 @@ async function startServer() {
   });
 
   // Delete user profile
-  app.post('/api/users/delete', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/users/delete', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { uid } = req.body;
     if (!uid) {
       return res.status(400).json({ error: 'Missing uid' });
@@ -1171,7 +1173,7 @@ async function startServer() {
       return res.status(403).json({ error: 'Access denied. You can only delete your own profile.' });
     }
 
-    const deleted = userDb.delete(uid);
+    const deleted = await userDb.delete(uid);
     res.json({ success: deleted });
   });
 
@@ -1587,7 +1589,7 @@ async function startServer() {
   // --- INTEREST REQUEST & MUTUAL CONSENT APIS ---
 
   // Send profile interest request
-  app.post('/api/interests/send', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/interests/send', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { receiverId } = req.body;
     const senderId = req.user!.uid;
 
@@ -1599,19 +1601,20 @@ async function startServer() {
       return res.status(400).json({ error: 'You cannot send an interest request to yourself.' });
     }
 
-    const receiver = userDb.findById(receiverId);
+    const receiver = await userDb.findById(receiverId);
     if (!receiver) {
       return res.status(404).json({ error: 'Target user profile not found.' });
     }
 
     // Check block status
-    const callerUser = userDb.findById(senderId);
+    const callerUser = await userDb.findById(senderId);
     if (callerUser?.blockedUsers?.includes(receiverId) || receiver.blockedUsers?.includes(senderId)) {
       return res.status(400).json({ error: 'Cannot send interest request. One of the users has blocked the other.' });
     }
 
     // Check if an interest already exists
-    const existing = userDb.getInterests().find(i => 
+    const interests = await userDb.getInterests();
+    const existing = interests.find(i => 
       (i.senderId === senderId && i.receiverId === receiverId) ||
       (i.senderId === receiverId && i.receiverId === senderId)
     );
@@ -1628,12 +1631,12 @@ async function startServer() {
       createdAt: new Date().toISOString()
     };
 
-    userDb.createInterest(interest);
+    await userDb.createInterest(interest);
     res.json({ success: true, interest });
   });
 
   // Respond to received interest requests (Accept / Reject)
-  app.post('/api/interests/respond', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/interests/respond', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { interestId, status } = req.body;
     const callerId = req.user!.uid;
 
@@ -1641,7 +1644,8 @@ async function startServer() {
       return res.status(400).json({ error: 'Missing interestId or invalid response status.' });
     }
 
-    const interest = userDb.getInterests().find(i => i.id === interestId);
+    const interests = await userDb.getInterests();
+    const interest = interests.find(i => i.id === interestId);
     if (!interest) {
       return res.status(404).json({ error: 'Interest request record not found.' });
     }
@@ -1651,21 +1655,21 @@ async function startServer() {
       return res.status(403).json({ error: 'Permission denied. Only the recipient can respond to this request.' });
     }
 
-    const success = userDb.updateInterest(interestId, status);
+    const success = await userDb.updateInterest(interestId, status);
     res.json({ success, status });
   });
 
   // Fetch logged in user's interest history list
-  app.get('/api/interests/my', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.get('/api/interests/my', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const callerId = req.user!.uid;
-    const interests = userDb.getInterests().filter(i => i.senderId === callerId || i.receiverId === callerId);
+    const interests = (await userDb.getInterests()).filter(i => i.senderId === callerId || i.receiverId === callerId);
     res.json({ success: true, interests });
   });
 
   // --- PERSISTED SECURE CHAT APIS ---
 
   // Fetch messages with another user (Consent-Locked)
-  app.get('/api/messages', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.get('/api/messages', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { otherId } = req.query;
     const callerId = req.user!.uid;
 
@@ -1674,14 +1678,15 @@ async function startServer() {
     }
 
     // Verify mutual accepted consent between candidates before allowing chat retrieval
-    const activeConsent = userDb.getInterests().some(i => 
+    const interests = await userDb.getInterests();
+    const activeConsent = interests.some(i => 
       i.status === 'accepted' && 
       ((i.senderId === callerId && i.receiverId === otherId) || (i.senderId === otherId && i.receiverId === callerId))
     );
 
     // Verify blocking status
-    const callerUser = userDb.findById(callerId);
-    const otherUser = userDb.findById(otherId);
+    const callerUser = await userDb.findById(callerId);
+    const otherUser = await userDb.findById(otherId);
     if (callerUser?.blockedUsers?.includes(otherId) || otherUser?.blockedUsers?.includes(callerId)) {
       return res.status(403).json({ error: 'Chat locked. One of the users has blocked the other.' });
     }
@@ -1690,7 +1695,7 @@ async function startServer() {
       return res.status(403).json({ error: 'Chat locked. You cannot retrieve messages until both users accept mutual interest.' });
     }
 
-    const chatHistory = userDb.getMessages().filter(m => 
+    const chatHistory = (await userDb.getMessages()).filter(m => 
       (m.senderId === callerId && m.receiverId === otherId) ||
       (m.senderId === otherId && m.receiverId === callerId)
     );
@@ -1699,7 +1704,7 @@ async function startServer() {
   });
 
   // Send message to another candidate (Consent-Locked)
-  app.post('/api/messages', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/messages', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { receiverId, text } = req.body;
     const senderId = req.user!.uid;
 
@@ -1708,14 +1713,15 @@ async function startServer() {
     }
 
     // Verify mutual accepted consent before allowing message delivery
-    const activeConsent = userDb.getInterests().some(i => 
+    const interests = await userDb.getInterests();
+    const activeConsent = interests.some(i => 
       i.status === 'accepted' && 
       ((i.senderId === senderId && i.receiverId === receiverId) || (i.senderId === receiverId && i.receiverId === senderId))
     );
 
     // Verify blocking status
-    const callerUser = userDb.findById(senderId);
-    const otherUser = userDb.findById(receiverId);
+    const callerUser = await userDb.findById(senderId);
+    const otherUser = await userDb.findById(receiverId);
     if (callerUser?.blockedUsers?.includes(receiverId) || otherUser?.blockedUsers?.includes(senderId)) {
       return res.status(403).json({ error: 'Chat locked. One of the users has blocked the other.' });
     }
@@ -1735,13 +1741,13 @@ async function startServer() {
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     };
 
-    userDb.createMessage(message);
+    await userDb.createMessage(message);
   });
 
   // --- SAFETY & MODERATION ENDPOINTS ---
 
   // Toggle Block/Unblock
-  app.post('/api/users/block', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/users/block', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { targetUserId } = req.body;
     const callerId = req.user!.uid;
 
@@ -1749,7 +1755,7 @@ async function startServer() {
       return res.status(400).json({ error: 'Target User ID is required.' });
     }
 
-    const caller = userDb.findById(callerId);
+    const caller = await userDb.findById(callerId);
     if (!caller) {
       return res.status(404).json({ error: 'Caller profile not found.' });
     }
@@ -1763,22 +1769,22 @@ async function startServer() {
       isBlocked = true;
 
       // Automatically unmatch/decline any active interest request upon block
-      const interests = userDb.getInterests();
+      const interests = await userDb.getInterests();
       const interest = interests.find(i =>
         (i.senderId === callerId && i.receiverId === targetUserId) ||
         (i.senderId === targetUserId && i.receiverId === callerId)
       );
       if (interest) {
-        userDb.updateInterest(interest.id, 'rejected');
+        await userDb.updateInterest(interest.id, 'rejected');
       }
     }
 
-    userDb.update(callerId, { blockedUsers: caller.blockedUsers });
+    await userDb.update(callerId, { blockedUsers: caller.blockedUsers });
     res.json({ success: true, isBlocked, blockedUsers: caller.blockedUsers });
   });
 
   // Toggle Mute/Unmute
-  app.post('/api/users/mute', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/users/mute', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { targetUserId } = req.body;
     const callerId = req.user!.uid;
 
@@ -1786,7 +1792,7 @@ async function startServer() {
       return res.status(400).json({ error: 'Target User ID is required.' });
     }
 
-    const caller = userDb.findById(callerId);
+    const caller = await userDb.findById(callerId);
     if (!caller) {
       return res.status(404).json({ error: 'Caller profile not found.' });
     }
@@ -1800,12 +1806,12 @@ async function startServer() {
       isMuted = true;
     }
 
-    userDb.update(callerId, { mutedUsers: caller.mutedUsers });
+    await userDb.update(callerId, { mutedUsers: caller.mutedUsers });
     res.json({ success: true, isMuted, mutedUsers: caller.mutedUsers });
   });
 
   // Unmatch a user (reverts mutual consent and locks chat)
-  app.post('/api/interests/unmatch', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/interests/unmatch', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { targetUserId } = req.body;
     const callerId = req.user!.uid;
 
@@ -1813,7 +1819,8 @@ async function startServer() {
       return res.status(400).json({ error: 'Target User ID is required.' });
     }
 
-    const interest = userDb.getInterests().find(i =>
+    const interests = await userDb.getInterests();
+    const interest = interests.find(i =>
       (i.senderId === callerId && i.receiverId === targetUserId) ||
       (i.senderId === targetUserId && i.receiverId === callerId)
     );
@@ -1822,12 +1829,12 @@ async function startServer() {
       return res.status(404).json({ error: 'No active connection found with this user.' });
     }
 
-    const success = userDb.updateInterest(interest.id, 'rejected');
+    const success = await userDb.updateInterest(interest.id, 'rejected');
     res.json({ success, status: 'rejected' });
   });
 
   // Report a profile
-  app.post('/api/reports/create', authenticateToken, (req: AuthenticatedRequest, res) => {
+  app.post('/api/reports/create', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { reportedUserId, type, details } = req.body;
     const reporterId = req.user!.uid;
 
@@ -1845,13 +1852,13 @@ async function startServer() {
       createdAt: new Date().toISOString()
     };
 
-    userDb.createReport(report);
+    await userDb.createReport(report);
     res.json({ success: true, report });
   });
 
   // Admin Stats endpoint
-  app.get('/api/admin/stats', authenticateToken, requireAdmin, (req, res) => {
-    const allUsers = userDb.getAll();
+  app.get('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
+    const allUsers = await userDb.getAll();
     const today = new Date().toISOString().slice(0, 10);
     const stats = {
       total: allUsers.length,
@@ -1867,27 +1874,27 @@ async function startServer() {
   });
 
   // Admin Notifications
-  app.get('/api/admin/notifications', authenticateToken, requireAdmin, (req, res) => {
-    const notifications = userDb.getNotifications();
+  app.get('/api/admin/notifications', authenticateToken, requireAdmin, async (req, res) => {
+    const notifications = await userDb.getNotifications();
     const unreadCount = notifications.filter(n => !n.read).length;
     res.json({ success: true, notifications, unreadCount });
   });
 
-  app.post('/api/admin/notifications/mark-read', authenticateToken, requireAdmin, (req, res) => {
-    userDb.markNotificationsRead();
+  app.post('/api/admin/notifications/mark-read', authenticateToken, requireAdmin, async (req, res) => {
+    await userDb.markNotificationsRead();
     res.json({ success: true });
   });
 
   // Admin Audit Logs
-  app.get('/api/admin/audit-logs', authenticateToken, requireAdmin, (req, res) => {
-    const logs = userDb.getAuditLogs();
+  app.get('/api/admin/audit-logs', authenticateToken, requireAdmin, async (req, res) => {
+    const logs = await userDb.getAuditLogs();
     res.json({ success: true, logs });
   });
 
   // Admin view all interest requests
-  app.get('/api/admin/interests', authenticateToken, requireAdmin, (req, res) => {
-    const interests = userDb.getInterests();
-    const allUsers = userDb.getAll();
+  app.get('/api/admin/interests', authenticateToken, requireAdmin, async (req, res) => {
+    const interests = await userDb.getInterests();
+    const allUsers = await userDb.getAll();
     const expanded = interests.map(i => {
       const sender = allUsers.find(u => u.uid === i.senderId);
       const receiver = allUsers.find(u => u.uid === i.receiverId);
@@ -1903,9 +1910,9 @@ async function startServer() {
   });
 
   // Admin view all reports
-  app.get('/api/admin/reports', authenticateToken, requireAdmin, (req, res) => {
-    const reports = userDb.getReports();
-    const allUsers = userDb.getAll();
+  app.get('/api/admin/reports', authenticateToken, requireAdmin, async (req, res) => {
+    const reports = await userDb.getReports();
+    const allUsers = await userDb.getAll();
     const expanded = reports.map(r => {
       const reporter = allUsers.find(u => u.uid === r.reporterId);
       const reported = allUsers.find(u => u.uid === r.reportedUserId);
@@ -1922,19 +1929,19 @@ async function startServer() {
   });
 
   // Admin resolve report status
-  app.post('/api/admin/reports/resolve', authenticateToken, requireAdmin, (req, res) => {
+  app.post('/api/admin/reports/resolve', authenticateToken, requireAdmin, async (req, res) => {
     const { reportId, status } = req.body;
     if (!reportId || !['pending', 'resolved', 'dismissed'].includes(status)) {
       return res.status(400).json({ error: 'Missing reportId or invalid resolution status.' });
     }
-    const success = userDb.updateReportStatus(reportId, status);
+    const success = await userDb.updateReportStatus(reportId, status);
     res.json({ success });
   });
 
   // Admin view chats statistics
-  app.get('/api/admin/chats', authenticateToken, requireAdmin, (req, res) => {
-    const messages = userDb.getMessages();
-    const allUsers = userDb.getAll();
+  app.get('/api/admin/chats', authenticateToken, requireAdmin, async (req, res) => {
+    const messages = await userDb.getMessages();
+    const allUsers = await userDb.getAll();
     
     const conversationsMap = new Map<string, { participants: string[], messagesCount: number, lastMessage: string, lastTimestamp: string }>();
     
@@ -1982,12 +1989,12 @@ async function startServer() {
   });
 
   // Admin revoke specific active session
-  app.post('/api/admin/sessions/revoke', authenticateToken, requireAdmin, (req, res) => {
+  app.post('/api/admin/sessions/revoke', authenticateToken, requireAdmin, async (req, res) => {
     const { token } = req.body;
     if (!token) {
       return res.status(400).json({ error: 'Missing token parameter to revoke.' });
     }
-    const revoked = userDb.revokeSession(token);
+    const revoked = await userDb.revokeSession(token);
     res.json({ success: revoked });
   });
 
