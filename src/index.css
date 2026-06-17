@@ -2,45 +2,65 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Poppins", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 
-  --color-maroon: #800000;
+  --color-brand: #D41B2C; /* Shaadi-like vibrant red */
+  --color-brand-light: #FCE8EA;
+  --color-brand-dark: #A31220;
+  
   --color-gold: #D4AF37;
-  --color-bg-minimal: #F5F6F8;
-  --color-text-dark: #2D2D2D;
-  --color-text-light: #718096;
-  --color-border-minimal: #E2E8F0;
+  --color-bg-app: #F3F5F7;
+  --color-card: #FFFFFF;
+  
+  --color-text-dark: #333333;
+  --color-text-light: #737373;
+  --color-border-soft: #EAEAEA;
+  --color-border-focus: #D41B2C;
 }
 
 /* Custom background animations & interactive styles */
 body {
   font-family: var(--font-sans);
-  background-color: var(--color-bg-minimal);
+  background-color: var(--color-bg-app);
   color: var(--color-text-dark);
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbars matching the Clean Minimalism color theme */
+/* Premium Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--color-bg-minimal);
+  background: var(--color-bg-app);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-gold);
+  background: var(--color-text-light);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-maroon);
+  background: var(--color-brand);
 }
 
-/* Custom card layout decoration left border */
-.minimal-card-accent {
-  border-left: 3px solid var(--color-gold);
-  padding-left: 10px;
+/* Global focus utilities */
+*:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+/* Card Depth Shadows */
+.shaadi-card-shadow {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.shaadi-card-shadow-hover:hover {
+  box-shadow: 0 8px 24px rgba(212, 27, 44, 0.1);
+}
+
+.shaadi-gradient-text {
+  background: linear-gradient(135deg, var(--color-brand) 0%, #FF5A60 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
