@@ -3,9 +3,9 @@ $envVars = @{
     GEMINI_API_KEY = "MY_GEMINI_API_KEY"
     SMTP_HOST = "smtp.gmail.com"
     SMTP_PORT = "587"
-    SMTP_USER = "vedparmar659@gmail.com"
-    SMTP_PASS = "xvcf nagp aspv hkju"
-    SMTP_FROM = "Dhobi Matrimony <vedparmar659@gmail.com>"
+    SMTP_USER = "dhobimetromany@gmail.com"
+    SMTP_PASS = "qhjg uirc rgco wlon"
+    SMTP_FROM = "Dhobi Matrimony <dhobimetromany@gmail.com>"
     JWT_SECRET = "dhobi_metromani_secret_key_12345"
 }
 
