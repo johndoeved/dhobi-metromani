@@ -495,8 +495,8 @@ class NodemailerEmailProvider implements EmailProvider {
   }
 
   async sendOtp(email: string, otp: string): Promise<boolean> {
-    const from = process.env.SMTP_FROM || 'Dhobi Matrimony <noreply@dhobimatrimony.com>';
-    const subject = 'Verify Your Email';
+    const from = process.env.SMTP_FROM || 'Dhobi Matrimony <dhobimetromany@gmail.com>';
+    const subject = 'Your Dhobi Matrimony Verification Code';
     
     const html = `
       <!DOCTYPE html>
@@ -504,55 +504,57 @@ class NodemailerEmailProvider implements EmailProvider {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verify Your Email</title>
+        <title>Your Dhobi Matrimony Verification Code</title>
         <style>
           body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: #f7f7f7;
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
             margin: 0;
             padding: 20px;
+            color: #333333;
           }
           .container {
-            max-width: 500px;
+            max-width: 550px;
             background-color: #ffffff;
             margin: 0 auto;
             padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            border: 1px solid #e8e0e0;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
           }
           .header {
             text-align: center;
-            border-bottom: 2px solid #8B0000;
+            border-bottom: 2px solid #990000;
             padding-bottom: 15px;
             margin-bottom: 20px;
           }
           .title {
-            color: #8B0000;
+            color: #990000;
             font-family: Georgia, serif;
             font-size: 24px;
             font-weight: bold;
             margin: 0;
           }
           .otp-box {
-            background-color: #f5f5f5;
-            border: 1px dashed #C8960C;
-            border-radius: 8px;
+            background-color: #f7f7f7;
+            border: 1px solid #D4AF37;
+            border-radius: 6px;
             padding: 15px;
             text-align: center;
-            font-size: 32px;
+            font-size: 30px;
             font-weight: bold;
-            letter-spacing: 6px;
-            color: #8B0000;
+            letter-spacing: 4px;
+            color: #990000;
             margin: 25px 0;
           }
           .footer {
-            font-size: 12px;
-            color: #666666;
+            font-size: 11px;
+            color: #888888;
             margin-top: 30px;
             text-align: center;
-            border-top: 1px solid #e8e0e0;
+            border-top: 1px solid #e2e8f0;
             padding-top: 15px;
+            line-height: 1.5;
           }
         </style>
       </head>
@@ -561,14 +563,15 @@ class NodemailerEmailProvider implements EmailProvider {
           <div class="header">
             <h1 class="title">Dhobi Matrimony</h1>
           </div>
-          <p>Hello,</p>
-          <p>Your verification code is:</p>
+          <p>Dear Member,</p>
+          <p>Your one-time email verification code is:</p>
           <div class="otp-box">${otp}</div>
-          <p>This code will expire in 5 minutes.</p>
-          <p>If you did not request this code, please ignore this email.</p>
+          <p>This code will expire in 5 minutes. For security reasons, please do not share this verification code with anyone.</p>
+          <p>If you did not request this verification code, you can safely ignore this email.</p>
           <div class="footer">
-            Regards,<br>
-            <strong>Dhobi Matrimony</strong>
+            Best regards,<br>
+            <strong>Dhobi Matrimony Security Team</strong><br>
+            <span style="font-size: 10px; color: #aaaaaa;">This is an automated transactional security email. Please do not reply.</span>
           </div>
         </div>
       </body>
@@ -663,19 +666,68 @@ td{padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;}
 </div></body></html>`;
 
 const userEmailHtml = (title: string, body: string) => `
-<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-body{font-family:'Segoe UI',Arial,sans-serif;background:#f7f7f7;margin:0;padding:20px;}
-.c{max-width:500px;background:#fff;margin:0 auto;padding:30px;border-radius:12px;border:1px solid #ddd;}
-.h{border-bottom:3px solid #8B0000;padding-bottom:12px;margin-bottom:20px;text-align:center;}
-.t{color:#8B0000;font-family:Georgia,serif;font-size:22px;font-weight:bold;margin:0;}
-.b{color:#333;font-size:14px;line-height:1.6;}
-.footer{font-size:11px;color:#999;margin-top:20px;border-top:1px solid #eee;padding-top:12px;text-align:center;}
-</style></head><body>
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+      color: #333333;
+    }
+    .c {
+      max-width: 550px;
+      background: #ffffff;
+      margin: 0 auto;
+      padding: 30px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    .h {
+      border-bottom: 2px solid #990000;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .t {
+      color: #990000;
+      font-family: Georgia, serif;
+      font-size: 22px;
+      font-weight: bold;
+      margin: 0;
+    }
+    .b {
+      color: #333333;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .footer {
+      font-size: 11px;
+      color: #888888;
+      margin-top: 25px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 12px;
+      text-align: center;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
 <div class="c">
   <div class="h"><h1 class="t">💍 Dhobi Matrimony</h1></div>
-  <div class="b"><h3 style="color:#8B0000;">${title}</h3>${body}</div>
-  <div class="footer">You are receiving this email because you registered on Dhobi Matrimony.<br>Do not reply to this email.</div>
-</div></body></html>`;
+  <div class="b"><h3 style="color:#990000; margin-top:0;">${title}</h3>${body}</div>
+  <div class="footer">
+    You are receiving this security notification because you registered on Dhobi Matrimony.<br>
+    Please do not reply directly to this automated transactional email.<br>
+    © 2026 Dhobi Matrimony. All rights reserved.
+  </div>
+</div>
+</body>
+</html>`;
 
 
 // --- SECURITY HELPER UTILITIES ---
