@@ -85,7 +85,7 @@ export default function SubscriptionSection({ users, subscriptions }: Subscripti
         <div className="bg-white p-5 rounded-2xl border border-[#e2e8f0] shadow-sm flex flex-col justify-between">
           <div className="space-y-2 minimal-card-accent">
             <h4 className="font-serif font-bold text-lg text-[#800000]">Financial Ledger Summary</h4>
-            <p className="text-xs text-[#718096]">Dhobi Metromani checkout tracking stats</p>
+            <p className="text-xs text-[#718096]">Dhobi Matrimony checkout tracking stats</p>
           </div>
 
           <div className="space-y-4 my-6">
@@ -168,7 +168,7 @@ export default function SubscriptionSection({ users, subscriptions }: Subscripti
                 onChange={(e) => setPlanName(e.target.value)}
                 className="w-full bg-[#f5f6f8] border border-[#e2e8f0] rounded-xl p-2.5 text-xs text-[#2d2d2d] outline-none mt-1 focus:bg-white focus:border-[#D4AF37]"
               >
-                <option value="Dhobi Gold Premium Annual">Dhobi Metromani Golden Annual (₹2,499)</option>
+                <option value="Dhobi Gold Premium Annual">Dhobi Matrimony Golden Annual (₹2,499)</option>
                 <option value="Dhobi Silver Premium Half-Year">Silver Mid-Term Clearance (₹1,499)</option>
                 <option value="Dhobi Lifetime Majestic Plan">Lifetime Supreme Clearance (₹9,999)</option>
               </select>

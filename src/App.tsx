@@ -9,7 +9,7 @@ export const API_BASE_URL = Capacitor.isNativePlatform() ? "https://dhobi-samaj-
 // ─── TRANSLATIONS ─────────────────────────────────────────────────────────────
 const TRANSLATIONS = {
   en: {
-    appName: "Dhobi Metromani",
+    appName: "Dhobi Matrimony",
     appTagline: "Trusted Matrimonial for the Dhobi Community",
     community: "Dhobi Community",
     selectLang: "Choose Your Language",
@@ -294,11 +294,11 @@ const TRANSLATIONS = {
     "Pending Verify": "Pending Verify",
     "Add New Profile": "Add New Profile",
     "Add Profile": "Add Profile",
-    "Dhobi Metromani Portal": "Dhobi Metromani Portal",
+    "Dhobi Metromani Portal": "Dhobi Matrimony Portal",
     "Navigation Menu": "Navigation Menu",
   },
   hi: {
-    appName: "धोबी मेट्रोमनी",
+    appName: "धोबी मैट्रिमोनी",
     appTagline: "धोबी समाज का विश्वसनीय वैवाहिक मंच",
     community: "धोबी समुदाय",
     selectLang: "अपनी भाषा चुनें",
@@ -583,11 +583,11 @@ const TRANSLATIONS = {
     "Pending Verify": "लंबित सत्यापन",
     "Add New Profile": "नई प्रोफाइल जोड़ें",
     "Add Profile": "प्रोफाइल जोड़ें",
-    "Dhobi Metromani Portal": "धोबी मेट्रोमनी पोर्टल",
+    "Dhobi Metromani Portal": "धोबी मैट्रिमोनी पोर्टल",
     "Navigation Menu": "नेविगेशन मेनू",
   },
   gu: {
-    appName: "ધોબી મેટ્રોમની",
+    appName: "ધોબી મેટ્રીમોની",
     appTagline: "ધોબી સમાજ માટે વિશ્વસનીય વૈવાહિક મંચ",
     community: "ધોબી સમુદાય",
     selectLang: "તમારી ભાષા પસંદ કરો",
@@ -871,7 +871,7 @@ const TRANSLATIONS = {
     "Pending Verify": "ચકાસણી બાકી છે",
     "Add New Profile": "નવી પ્રોફાઇલ ઉમેરો",
     "Add Profile": "પ્રોફાઇલ ઉમેરો",
-    "Dhobi Metromani Portal": "ધોબી મેટ્રોમની પોર્ટલ",
+    "Dhobi Metromani Portal": "ધોબી મેત્રીમોની પોર્ટલ",
     "Navigation Menu": "નેવિગેશન મેનૂ",
   },
 };
@@ -1096,10 +1096,10 @@ export const downloadBioDataPdf = async (user: any, options: { template?: string
   const footerY = 282;
   doc.setFontSize(7.5);
   doc.setTextColor(150, 150, 150);
-  doc.text("This bio data was generated via Dhobi Samaj Metromani Portal. All information is subject to verification.", pageW / 2, footerY, { align: "center" });
+  doc.text("This bio data was generated via Dhobi Samaj Matrimony Portal. All information is subject to verification.", pageW / 2, footerY, { align: "center" });
 
   // ── Save / Download ───────────────────────────────────────────────────────────
-  const fileName = `${(user.name || "BioData").replace(/\s+/g, "_")}_Dhobi_Metromani.pdf`;
+  const fileName = `${(user.name || "BioData").replace(/\s+/g, "_")}_Dhobi_Matrimony.pdf`;
   if (Capacitor.isNativePlatform()) {
     try {
       const pdfBase64 = doc.output('datauristring').split(',')[1];
@@ -1126,23 +1126,23 @@ export const downloadBioDataPdf = async (user: any, options: { template?: string
 
 
 // ─── COLORS & THEME ──────────────────────────────────────────────────────────
-// Shaadi.com-inspired: vibrant red primary, crisp white cards, light gray background
+// Jeevansathi-inspired: white/light gray base, deep maroon accent, gold highlights
 const C = {
-  primary: "#D41B2C",
-  primaryLight: "#F14B5A",
-  gold: "#D4AF37",
-  goldLight: "#F4D03F",
-  bg: "#F3F5F7",
+  primary: "#8B0000",
+  primaryLight: "#a30000",
+  gold: "#C8960C",
+  goldLight: "#f0c040",
+  bg: "#f7f7f7",
   white: "#ffffff",
   card: "#ffffff",
-  border: "#EAEAEA",
-  text: "#333333",
-  muted: "#737373",
-  subtle: "#A0A0A0",
-  success: "#1B9C56",
-  error: "#D41B2C",
-  warning: "#F5A623",
-  pending: "#4A90E2",
+  border: "#e8e0e0",
+  text: "#1a1a1a",
+  muted: "#666666",
+  subtle: "#999999",
+  success: "#16a34a",
+  error: "#dc2626",
+  warning: "#d97706",
+  pending: "#7c3aed",
 };
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -1551,32 +1551,30 @@ function EmailLoginScreen({ users, onUserLogin, onAdminLogin }) {
   };
 
   return (
-    <div className="dhobi-app-shell" style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", fontFamily: "var(--font-sans)" }}>
+    <div className="dhobi-app-shell" style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", fontFamily: "'Segoe UI', sans-serif" }}>
       {/* Header */}
-      <div style={{ background: C.primary, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `4px solid ${C.primaryDark}` }}>
+      <div style={{ background: C.primary, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>💍</div>
         <div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 600 }}>{t("community")}</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>{t("appName")}</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", letterSpacing: 2, textTransform: "uppercase" }}>{t("community")}</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", fontFamily: "Georgia, serif", letterSpacing: 0.5 }}>{t("appName")}</div>
         </div>
       </div>
 
       {/* Hero Banner */}
-      <div style={{ background: `linear-gradient(180deg, ${C.primary} 0%, ${C.primaryDark} 100%)`, padding: "40px 24px", textAlign: "center", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "relative", zIndex: 2 }}>
-          <div style={{ color: "#fff", fontSize: 26, fontWeight: 700, marginBottom: 8, lineHeight: 1.2 }}>{t("findPartner")}</div>
-          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 14, fontWeight: 500 }}>{t("trustedBy")}</div>
-        </div>
-        <div style={{ position: "absolute", top: -50, right: -20, opacity: 0.1, fontSize: 150 }}>❤️</div>
+      <div style={{ background: `linear-gradient(135deg, ${C.primary} 0%, #5a0000 100%)`, padding: "28px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 40, marginBottom: 8 }}>🌸</div>
+        <div style={{ color: "#fff", fontSize: 22, fontWeight: 700, fontFamily: "Georgia, serif", marginBottom: 4 }}>{t("findPartner")}</div>
+        <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>{t("trustedBy")}</div>
       </div>
 
-      <div style={{ flex: 1, padding: "32px 20px", maxWidth: 460, margin: "-20px auto 0", width: "100%", boxSizing: "border-box", position: "relative", zIndex: 10 }}>
+      <div style={{ flex: 1, padding: "24px 20px", maxWidth: 440, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
         {/* Mode toggle - only shown on web, not in APK, not on admin panel */}
         {!window.location.search.includes("panel=admin") && !window.location.pathname.endsWith("/admin") && !Capacitor.isNativePlatform() && (
-          <div style={{ display: "flex", background: "#EAEAEA", borderRadius: 12, padding: 4, marginBottom: 24, boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ display: "flex", background: "#f0f0f0", borderRadius: 10, padding: 4, marginBottom: 24 }}>
             {[["Login / Verify", false], [t("adminLogin"), true]].map(([label, isAdmin]) => (
               <button key={label as string} onClick={() => { setAdminMode(isAdmin as boolean); setError(""); setSuccessMsg(""); setStep("email"); }}
-                style={{ flex: 1, padding: "10px 12px", borderRadius: 10, border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "all .2s", background: adminMode === isAdmin ? "#fff" : "transparent", color: adminMode === isAdmin ? C.primary : C.muted, boxShadow: adminMode === isAdmin ? "0 2px 8px rgba(0,0,0,0.1)" : "none" }}>
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer", transition: "all .2s", background: adminMode === isAdmin ? "#fff" : "transparent", color: adminMode === isAdmin ? C.primary : C.muted, boxShadow: adminMode === isAdmin ? "0 1px 6px rgba(0,0,0,0.1)" : "none" }}>
                 {label as string}
               </button>
             ))}
@@ -1584,117 +1582,123 @@ function EmailLoginScreen({ users, onUserLogin, onAdminLogin }) {
         )}
         {!adminMode ? (
           <div>
+
             {step === "email" ? (
-              <div className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 20, padding: 32, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 6 }}>{t("sendOtp")}</div>
-                <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>{t("emailPlaceholder")}</div>
-                <div style={{ marginBottom: 16 }}>
+              <div style={{ background: C.white, borderRadius: 16, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>{t("sendOtp")}</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>{t("emailPlaceholder")}</div>
+                <div style={{ marginBottom: 14 }}>
                   <Input label={t("emailLabel")} value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" required />
                 </div>
-                {error && <div style={{ color: C.error, fontSize: 13, marginBottom: 12, padding: "8px 12px", background: `${C.error}10`, borderRadius: 8 }}>{error}</div>}
+                {error && <div style={{ color: C.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
                 <Btn onClick={sendOTP} variant="primary" full disabled={loading} size="lg">
                   {loading ? "..." : t("sendOtp")}
                 </Btn>
               </div>
             ) : (
-              <div className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 20, padding: 32, border: `1px solid ${C.border}` }}>
-                <button onClick={() => { setStep("email"); setOtp(""); setError(""); setSuccessMsg(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.primary, display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}>
+              <div style={{ background: C.white, borderRadius: 16, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+                <button onClick={() => { setStep("email"); setOtp(""); setError(""); setSuccessMsg(""); }} style={{ background: "none", border: "none", cursor: "pointer", color: C.primary, display: "flex", alignItems: "center", gap: 4, fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0 }}>
                   <Ic n="back" s={16} c={C.primary} /> Back
                 </button>
-                <div style={{ fontSize: 20, fontWeight: 700, color: C.text, marginBottom: 6 }}>{t("verifyOtp")}</div>
-                <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>OTP sent to <strong>{email}</strong></div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>{t("verifyOtp")}</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>OTP sent to {email}</div>
                 
-                <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 14 }}>
                   <Input label={t("otpLabel")} value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder={t("otpPlaceholder")} required />
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
                   <input 
                     type="checkbox" 
                     id="remember-me" 
                     checked={rememberMe} 
                     onChange={e => setRememberMe(e.target.checked)} 
-                    style={{ cursor: "pointer", width: 18, height: 18, accentColor: C.primary }} 
+                    style={{ cursor: "pointer", width: 15, height: 15 }} 
                   />
-                  <label htmlFor="remember-me" style={{ fontSize: 14, color: C.muted, cursor: "pointer", userSelect: "none" }}>
+                  <label htmlFor="remember-me" style={{ fontSize: 13, color: C.muted, cursor: "pointer", userSelect: "none" }}>
                     {t("rememberMe")}
                   </label>
                 </div>
 
                 {/* Expiry Countdown */}
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: C.muted, marginBottom: 16, padding: "10px 14px", background: C.bg, borderRadius: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.muted, marginBottom: 14 }}>
                   <span>{t("otpTimer")}: <strong style={{ color: timeLeft <= 60 ? C.error : C.text }}>{fmtTime(timeLeft)}</strong></span>
                 </div>
 
-                {successMsg && <div style={{ color: C.success, fontSize: 13, marginBottom: 12, padding: "8px 12px", background: `${C.success}10`, borderRadius: 8, fontWeight: 600 }}>{successMsg}</div>}
-                {error && <div style={{ color: C.error, fontSize: 13, marginBottom: 12, padding: "8px 12px", background: `${C.error}10`, borderRadius: 8 }}>{error}</div>}
+                {successMsg && <div style={{ color: C.success, fontSize: 12, marginBottom: 10, fontWeight: 600 }}>{successMsg}</div>}
+                {error && <div style={{ color: C.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
                 
                 <Btn onClick={verifyOTP} variant="primary" full size="lg" disabled={loading || timeLeft <= 0}>{t("verifyOtp")}</Btn>
                 
-                <button onClick={sendOTP} disabled={cooldown > 0 || loading} style={{ background: "none", border: "none", cursor: cooldown > 0 ? "not-allowed" : "pointer", color: cooldown > 0 ? C.subtle : C.primary, fontSize: 14, fontWeight: 600, width: "100%", marginTop: 16, padding: 8 }}>
+                <button onClick={sendOTP} disabled={cooldown > 0 || loading} style={{ background: "none", border: "none", cursor: cooldown > 0 ? "not-allowed" : "pointer", color: cooldown > 0 ? C.subtle : C.primary, fontSize: 13, fontWeight: 600, width: "100%", marginTop: 12, padding: 8 }}>
                   {cooldown > 0 ? `${t("resendOtp")} ${cooldown}s` : t("resendOtp")}
                 </button>
               </div>
             )}
           </div>
         ) : (
-          <div className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 20, padding: 32, border: `1px solid ${C.border}` }}>
-            <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ width: 64, height: 64, borderRadius: "50%", background: `${C.primary}10`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                <Ic n="shield" s={28} c={C.primary} />
+          <div style={{ background: C.white, borderRadius: 16, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+            <div style={{ textAlign: "center", marginBottom: 20 }}>
+              <div style={{ width: 56, height: 56, borderRadius: "50%", background: `${C.primary}15`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px" }}>
+                <Ic n="shield" s={24} c={C.primary} />
               </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>{t("adminLogin")}</div>
-              <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Secure Access Portal</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{t("adminLogin")}</div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 20 }}>
-              <Input label={t("emailLabel")} value={email} onChange={e => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} />
-              <Input label={t("password")} type="password" value={adminPass} onChange={e => setAdminPass(e.target.value)} placeholder={t("password")} />
-            </div>
-            {error && <div style={{ color: C.error, fontSize: 13, marginBottom: 12, padding: "8px 12px", background: `${C.error}10`, borderRadius: 8 }}>{error}</div>}
-            <Btn onClick={adminLogin} variant="primary" full size="lg">{t("loginBtn")}</Btn>
+            <Input label={t("emailLabel")} value={email} onChange={e => setEmail(e.target.value)} placeholder={t("emailPlaceholder")} />
+            <Input label={t("password")} type="password" value={adminPass} onChange={e => setAdminPass(e.target.value)} placeholder={t("password")} />
+            {error && <div style={{ color: C.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
+            <Btn onClick={adminLogin} variant="primary" full size="lg"><Ic n="shield" s={16} c="#fff" /> {t("loginBtn")}</Btn>
           </div>
         )}
       </div>
 
       {/* ── Help & Contact Footer ── */}
-      <div style={{ padding: "0 20px 40px", maxWidth: 460, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <div style={{ background: C.white, borderRadius: 20, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-          <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <div style={{ fontSize: 24, marginBottom: 8 }}>📞</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Need Help or Have Questions?</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Our team is here to assist you anytime.</div>
+      <div style={{ padding: "20px 20px 32px", maxWidth: 440, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 18, boxShadow: "0 2px 10px rgba(0,0,0,0.04)" }}>
+          <div style={{ textAlign: "center", marginBottom: 14 }}>
+            <div style={{ fontSize: 22, marginBottom: 4 }}>📞</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Need Help or Have Questions?</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Our team is here to assist you. Contact us anytime.</div>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <a href="tel:+919173446708" style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "#FAFAFA", borderRadius: 12, border: `1px solid ${C.border}`, textDecoration: "none" }}>
-              <span style={{ width: 40, height: 40, borderRadius: "50%", background: `${C.primary}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📱</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <a href="tel:+919173446708" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fef9f0", borderRadius: 10, border: `1px solid ${C.gold}40`, textDecoration: "none" }}>
+              <span style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📱</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Rohit Parmar</div>
-                <div style={{ fontSize: 12, color: C.muted }}>Platform Manager</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Rohit Parmar</div>
+                <div style={{ fontSize: 11, color: C.muted }}>Platform Manager</div>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.primary }}>Call Now</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>+91 91734 46708</div>
             </a>
-            <a href="tel:+916353606165" style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 16px", background: "#FAFAFA", borderRadius: 12, border: `1px solid ${C.border}`, textDecoration: "none" }}>
-              <span style={{ width: 40, height: 40, borderRadius: "50%", background: `${C.primary}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📱</span>
+            <a href="tel:+916353606165" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#fef9f0", borderRadius: 10, border: `1px solid ${C.gold}40`, textDecoration: "none" }}>
+              <span style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.gold}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>📱</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>Ved Parmar</div>
-                <div style={{ fontSize: 12, color: C.muted }}>Technical Support</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Ved Parmar</div>
+                <div style={{ fontSize: 11, color: C.muted }}>Technical Support</div>
               </div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.primary }}>Call Now</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.primary }}>+91 6353606165</div>
+            </a>
+            <a href="mailto:vedp9429@gmail.com" style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#f0f4ff", borderRadius: 10, border: "1px solid #c7d2fe", textDecoration: "none" }}>
+              <span style={{ width: 36, height: 36, borderRadius: "50%", background: "#e0e7ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>✉️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Email Us</div>
+                <div style={{ fontSize: 11, color: C.muted }}>For queries & feedback</div>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#4f46e5" }}>vedp9429@gmail.com</div>
             </a>
           </div>
           {/* WhatsApp buttons */}
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <a href="https://wa.me/919173446708" target="_blank" rel="noreferrer"
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#25D366", color: "#fff", padding: "12px 0", borderRadius: 12, textDecoration: "none", fontWeight: 700, fontSize: 13, boxShadow: "0 2px 6px rgba(37,211,102,0.3)" }}>
-              WhatsApp Rohit
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#25d366", color: "#fff", padding: "10px 0", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: 12 }}>
+              📲 WhatsApp Rohit
             </a>
             <a href="https://wa.me/916353606165" target="_blank" rel="noreferrer"
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#25D366", color: "#fff", padding: "12px 0", borderRadius: 12, textDecoration: "none", fontWeight: 700, fontSize: 13, boxShadow: "0 2px 6px rgba(37,211,102,0.3)" }}>
-              WhatsApp Ved
+              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#25d366", color: "#fff", padding: "10px 0", borderRadius: 10, textDecoration: "none", fontWeight: 700, fontSize: 12 }}>
+              📲 WhatsApp Ved
             </a>
           </div>
         </div>
-        <div style={{ textAlign: "center", fontSize: 12, color: C.subtle, marginTop: 24 }}>Dhobi Metromani Portal © 2025 • Premium Matrimonial</div>
+        <div style={{ textAlign: "center", fontSize: 11, color: C.subtle, marginTop: 14 }}>Dhobi Matrimony Portal © 2025 • Dhobi Community Matrimonial</div>
       </div>
     </div>
   );
@@ -2148,35 +2152,31 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
   };
 
   return (
-    <div className="dhobi-app-shell" style={{ minHeight: "100vh", background: C.bg, fontFamily: "var(--font-sans)" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "'Segoe UI', sans-serif" }}>
       <Toast msg={toast.msg} type={toast.type} />
       {/* Header */}
-      <div style={{ background: C.primary, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, borderBottom: `4px solid ${C.primaryDark}` }}>
-        <button onClick={onBack} style={{ background: "rgba(255,255,255,0.15)", borderRadius: "50%", border: "none", cursor: "pointer", width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", transition: "0.2s" }}><Ic n="back" s={20} c="#fff" /></button>
-        <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: -0.5 }}>{t("Create Profile")}</div>
+      <div style={{ background: C.primary, padding: "14px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", cursor: "pointer", color: "#fff", padding: 4 }}><Ic n="back" s={20} c="#fff" /></button>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", fontFamily: "Georgia, serif" }}>{t("Create Profile")}</div>
       </div>
       {/* Steps */}
-      <div style={{ background: C.white, padding: "16px 20px", borderBottom: `1px solid ${C.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.03)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: 460, margin: "0 auto", position: "relative" }}>
-          {/* Background line for steps */}
-          <div style={{ position: "absolute", top: 16, left: 24, right: 24, height: 2, background: C.border, zIndex: 1 }} />
+      <div style={{ background: C.white, padding: "14px 20px", borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
           {steps.map((s, i) => (
-            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", position: "relative", zIndex: 2 }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", background: i < step ? C.success : i === step ? C.primary : C.white, border: `2px solid ${i < step ? C.success : i === step ? C.primary : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: i <= step ? "#fff" : C.subtle, fontWeight: 700, boxShadow: i === step ? `0 0 0 4px ${C.primary}20` : "none" }}>
-                {i < step ? "✓" : i + 1}
+            <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: i < step ? C.success : i === step ? C.primary : "#e0e0e0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: i <= step ? "#fff" : C.muted, fontWeight: 700 }}>
+                {i < step ? <Ic n="check" s={14} c="#fff" /> : i + 1}
               </div>
-              <div style={{ fontSize: 10, color: i === step ? C.primary : C.muted, marginTop: 8, textAlign: "center", fontWeight: i === step ? 700 : 500, letterSpacing: 0.5 }}>{s.title.toUpperCase()}</div>
+              <div style={{ fontSize: 9, color: i === step ? C.primary : C.muted, marginTop: 3, textAlign: "center", fontWeight: i === step ? 700 : 400 }}>{s.title}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div style={{ padding: "32px 20px 100px", maxWidth: 460, margin: "0 auto" }}>
-        <div className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 20, padding: 32, border: `1px solid ${C.border}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 24, borderBottom: `1px solid ${C.border}`, paddingBottom: 16 }}>
-            <div style={{ fontSize: 24, background: `${C.primary}10`, width: 48, height: 48, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>{steps[step].icon}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: C.text }}>{steps[step].title}</div>
-          </div>
+      <div style={{ padding: "20px 20px 100px", maxWidth: 480, margin: "0 auto" }}>
+        <div style={{ background: C.white, borderRadius: 16, padding: 20, boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 20, marginBottom: 4 }}>{steps[step].icon}</div>
+          <div style={{ fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 16 }}>{steps[step].title}</div>
 
           {/* Step 0: Basic Details */}
           {step === 0 && <>
@@ -2583,7 +2583,7 @@ function PendingApprovalScreen({ user, onLogout, onDownloadBioData, onEditProfil
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
         <div style={{ fontSize: 28 }}>💍</div>
-        <div style={{ fontSize: 18, fontWeight: 800, color: C.primary, fontFamily: "Georgia, serif" }}>Dhobi Metromani</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.primary, fontFamily: "Georgia, serif" }}>Dhobi Matrimony</div>
       </div>
 
       <div style={{ background: C.white, borderRadius: 20, padding: 28, maxWidth: 400, width: "100%", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,0.12)" }}>
@@ -2851,19 +2851,15 @@ function UserApp({ currentUser, setCurrentUser, triggerRefresh, allUsers, setAll
       <Toast msg={toast.msg} type={toast.type} />
 
       {/* Top Bar */}
-      <div style={{ background: C.white, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 30, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.primary}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💍</div>
-          <div>
-            <div style={{ fontSize: 10, color: C.primary, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>{t("community")}</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.text, letterSpacing: -0.5 }}>{t("appName")}</div>
-          </div>
+      <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ fontSize: 22 }}>💍</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.primary, fontFamily: "Georgia, serif" }}>{t("appName")}</div>
         </div>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          {currentUser.isVerified && <span style={{ background: "#f0fdf4", color: "#15803d", fontSize: 10, fontWeight: 800, padding: "4px 10px", borderRadius: 99, border: "1px solid #bbf7d0" }}>✓ VERIFIED</span>}
-          <button onClick={() => showToast("Notifications: No new alerts", "info")} style={{ background: "#FAFAFA", border: `1px solid ${C.border}`, borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
-            <Ic n="bell" s={18} c={C.text} />
-            <div style={{ position: "absolute", top: 8, right: 8, width: 6, height: 6, background: C.error, borderRadius: "50%", border: "2px solid #fff" }} />
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {currentUser.isVerified && <span style={{ background: "#fef3c7", color: "#92400e", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 99 }}>⭐ VERIFIED</span>}
+          <button onClick={() => showToast("Notifications: No new alerts", "info")} style={{ background: "none", border: "none", cursor: "pointer", color: C.muted }}>
+            <Ic n="bell" s={20} c={C.muted} />
           </button>
         </div>
       </div>
@@ -3028,14 +3024,11 @@ function UserApp({ currentUser, setCurrentUser, triggerRefresh, allUsers, setAll
       </div>
 
       {/* Bottom Nav */}
-      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 460, background: C.white, borderTop: `1px solid ${C.border}`, display: 'flex', zIndex: 40, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 20px rgba(0,0,0,0.04)" }}>
+      <div style={{ position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: 430, background: C.white, borderTop: `2px solid ${C.border}`, display: 'flex', zIndex: 20 }}>
         {[['home', 'home', t('home')], ['search', 'search', t('search')], ['messages', 'chat', t('messages')], ['profile', 'user', t('profile')]].map(([id, icon, label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '12px 0 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, position: "relative", transition: 'all .2s' }}>
-            <div style={{ padding: "6px 16px", borderRadius: 20, background: tab === id ? `${C.primary}15` : "transparent", transition: "all 0.2s" }}>
-              <Ic n={icon} s={20} c={tab === id ? C.primary : C.muted} />
-            </div>
-            <span style={{ fontSize: 10, fontWeight: tab === id ? 700 : 500, color: tab === id ? C.primary : C.muted, letterSpacing: 0.3 }}>{label}</span>
-            {tab === id && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 32, height: 3, background: C.primary, borderBottomLeftRadius: 4, borderBottomRightRadius: 4 }} />}
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '10px 0 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, color: tab === id ? C.primary : C.muted, transition: 'color .15s' }}>
+            <Ic n={icon} s={20} c={tab === id ? C.primary : C.muted} />
+            <span style={{ fontSize: 10, fontWeight: tab === id ? 700 : 400 }}>{label}</span>
           </button>
         ))}
       </div>
@@ -3050,65 +3043,50 @@ function UserApp({ currentUser, setCurrentUser, triggerRefresh, allUsers, setAll
 function ProfileCard({ user, onView, onInterest, interestInfo }: any) {
   const { t } = useLang();
   return (
-    <div className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 16, marginBottom: 20, overflow: "hidden", border: `1px solid ${C.border}`, display: "flex", flexDirection: "column" }}>
-      {/* Large Image Header */}
-      <div style={{ position: "relative", width: "100%", height: 260, cursor: "pointer" }} onClick={onView}>
-        <img src={user.profilePhoto || DEFAULT_AVATAR} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)", padding: "30px 16px 12px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-          <div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
-              {user.name}
-              {user.isVerified && <div style={{ width: 16, height: 16, borderRadius: "50%", background: C.primary, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>✓</div>}
-            </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", fontWeight: 500, marginTop: 2 }}>{user.age} yrs, {user.height}</div>
+    <div style={{ background: C.white, borderRadius: 14, marginBottom: 12, overflow: "hidden", border: `1px solid ${C.border}`, boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
+      <div style={{ display: "flex", gap: 0 }}>
+        <div style={{ width: 110, flexShrink: 0, position: "relative" }}>
+          <img src={user.profilePhoto || DEFAULT_AVATAR} alt={user.name} style={{ width: "100%", height: 130, objectFit: "cover" }} />
+          {user.isVerified && <div style={{ position: "absolute", top: 6, left: 6, background: "#fef3c7", borderRadius: 20, padding: "2px 6px", fontSize: 9, fontWeight: 700, color: "#92400e" }}>⭐ Verified</div>}
+          {user.membership === "premium" && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(139,0,0,0.85)", textAlign: "center", padding: "3px 0", fontSize: 9, color: "#ffd700", fontWeight: 700 }}>{t("PREMIUM")}</div>}
+        </div>
+        <div style={{ flex: 1, padding: "12px 12px 8px" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{user.name}, {user.age}</div>
+          <div style={{ fontSize: 11, color: C.primary, fontWeight: 600, marginTop: 2 }}>{user.caste}</div>
+          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 3 }}>
+            {[
+              ["🎓", user.education, true],
+              ["💼", user.jobType, true],
+              ["📍", user.location],
+              ["🕊", user.maritalStatus, true],
+            ].map(([ic, val, translateVal]) => val && (
+              <div key={ic} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: C.muted }}>
+                <span>{ic}</span><span>{translateVal ? t(val) : val}</span>
+              </div>
+            ))}
           </div>
-          {user.membership === "premium" && (
-            <div style={{ background: C.gold, color: "#fff", padding: "4px 8px", borderRadius: 12, fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" }}>{t("PREMIUM")}</div>
-          )}
         </div>
       </div>
-
-      {/* Details Section */}
-      <div style={{ padding: "16px", cursor: "pointer" }} onClick={onView}>
-        <div style={{ fontSize: 14, color: C.primary, fontWeight: 700, marginBottom: 12 }}>{user.caste} • {user.religion}</div>
+      <div style={{ display: "flex", borderTop: `1px solid ${C.bg}` }}>
+        <button onClick={onView} style={{ flex: 1, padding: "10px 0", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.primary, borderRight: `1px solid ${C.bg}` }}>
+          {t("View Profile")}
+        </button>
         
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 4px" }}>
-          {[
-            ["🎓", user.education, true],
-            ["💼", user.jobType, true],
-            ["📍", user.location],
-            ["🕊", user.maritalStatus, true],
-          ].map(([ic, val, translateVal]) => val && (
-            <div key={ic} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.text }}>
-              <span style={{ opacity: 0.8 }}>{ic}</span>
-              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{translateVal ? t(val) : val}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div style={{ display: "flex", borderTop: `1px solid ${C.border}`, background: C.bg }}>
         {interestInfo === null ? (
-          <>
-            <button onClick={onView} style={{ flex: 1, padding: "14px 0", background: "none", border: "none", borderRight: `1px solid ${C.border}`, cursor: "pointer", fontSize: 14, fontWeight: 600, color: C.text, transition: "background 0.2s" }} onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = C.white} onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "none"}>
-              {t("View Profile")}
-            </button>
-            <button onClick={onInterest} style={{ flex: 1, padding: "14px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: C.primary, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.2s" }} onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = `${C.primary}05`} onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "none"}>
-              <Ic n="heart" s={16} c={C.primary} /> {t("Connect")}
-            </button>
-          </>
+          <button onClick={onInterest} style={{ flex: 1, padding: "10px 0", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.primary }}>
+            {t("Send Interest")} 💌
+          </button>
         ) : interestInfo.status === "pending" ? (
-          <button disabled style={{ flex: 1, padding: "14px 0", background: "none", border: "none", cursor: "not-allowed", fontSize: 14, fontWeight: 600, color: C.muted }}>
+          <button disabled style={{ flex: 1, padding: "10px 0", background: "none", border: "none", cursor: "not-allowed", fontSize: 12, fontWeight: 600, color: C.muted }}>
             {interestInfo.senderId === user.uid ? t("⚡ Action Needed") : t("⏳ Pending Accept")}
           </button>
         ) : interestInfo.status === "accepted" ? (
-          <button onClick={onView} style={{ flex: 1, padding: "14px 0", background: "none", border: "none", cursor: "pointer", fontSize: 14, fontWeight: 700, color: C.success, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-            💬 {t("Chat Active")}
+          <button onClick={onView} style={{ flex: 1, padding: "10px 0", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.success }}>
+            {t("💬 Chat Active")}
           </button>
         ) : (
-          <button disabled style={{ flex: 1, padding: "14px 0", background: "none", border: "none", cursor: "not-allowed", fontSize: 14, fontWeight: 600, color: C.error }}>
-            ✕ {t("Declined")}
+          <button disabled style={{ flex: 1, padding: "10px 0", background: "none", border: "none", cursor: "not-allowed", fontSize: 12, fontWeight: 600, color: C.error }}>
+            {t("✕ Declined")}
           </button>
         )}
       </div>
@@ -3603,7 +3581,7 @@ function AdminPanel({ users, setUsers, onLogout, onSwitchUser }) {
           <div style={{ fontSize: 22 }}>💍</div>
           <div>
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", letterSpacing: 2, textTransform: "uppercase" }}>Admin Console</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: "Georgia, serif" }}>Dhobi Metromani</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: "#fff", fontFamily: "Georgia, serif" }}>Dhobi Matrimony</div>
           </div>
         </div>
         <div style={{ flex: 1 }} />
@@ -3785,22 +3763,15 @@ function AdminDashboard({ isMobile, users, pending, approved, total, stats: apiS
 
   return (
     <div>
-      <div style={{ fontSize: 24, fontWeight: 800, color: C.text, marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
-        📊 Dashboard Overview
-      </div>
-      <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>Real-time statistics from the platform database</div>
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+      <div style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>📊 Dashboard Overview</div>
+      <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Real-time statistics from the database</div>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
         {statCards.map(s => (
-          <div key={s.label} className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 16, padding: "20px", border: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 16, transition: "transform .2s, box-shadow .2s" }}
-            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <div style={{ fontSize: 20 }}>{s.icon === "check" ? "✅" : s.icon === "users" ? "👥" : s.icon === "bell" ? "🔔" : s.icon === "x" ? "🚫" : s.icon === "calendar" ? "📅" : s.icon === "crown" ? "👑" : s.icon === "user" && s.color === "#2563eb" ? "👨" : "👩"}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
-            </div>
+          <div key={s.label} style={{ background: s.bg || C.white, borderRadius: 14, padding: "16px 18px", border: `1px solid ${C.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.05)", transition: "transform .15s" }}
+            onMouseEnter={e => (e.currentTarget.style.transform = "translateY(-2px)")}
+            onMouseLeave={e => (e.currentTarget.style.transform = "translateY(0)")}>
+            <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 8 }}>{s.label}</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: s.color }}>{s.val}</div>
           </div>
         ))}
       </div>
@@ -4122,12 +4093,12 @@ function AdminUsers({ isMobile, users, onVerify, onBlock, onDelete, onHoverUser,
         </div>
       </div>
 
-      <div className="shaadi-card-shadow" style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, overflowX: "auto" }}>
+      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
-            <tr style={{ background: "#FAFAFA" }}>
+            <tr style={{ background: `${C.primary}08` }}>
               {["Profile", "Location & Details", "Status", "Actions"].map(h => (
-                <th key={h} style={{ padding: "16px", textAlign: "left", fontWeight: 700, color: C.muted, borderBottom: `2px solid ${C.border}`, fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>{h}</th>
+                <th key={h} style={{ padding: "12px 14px", textAlign: "left", fontWeight: 700, color: C.text, borderBottom: `1px solid ${C.border}`, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -5010,37 +4981,45 @@ function LanguageSplashScreen({ onSelect }: { onSelect: (l: LangCode) => void })
   return (
     <div style={{
       minHeight: "100vh",
-      background: `linear-gradient(135deg, ${C.primaryLight}15 0%, ${C.bg} 100%)`,
+      background: "linear-gradient(160deg, #8B0000 0%, #4a0000 40%, #1a0000 100%)",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
       padding: "24px 20px",
-      fontFamily: "var(--font-sans)",
+      fontFamily: "'Segoe UI', sans-serif",
+      overflow: "hidden",
       position: "relative",
     }}>
+      {/* Decorative circles */}
+      <div style={{ position: "absolute", top: -80, right: -80, width: 260, height: 260, borderRadius: "50%", background: "rgba(200,150,12,0.08)", pointerEvents: "none" }} />
+      <div style={{ position: "absolute", bottom: -60, left: -60, width: 200, height: 200, borderRadius: "50%", background: "rgba(200,150,12,0.06)", pointerEvents: "none" }} />
+
       {/* Logo area */}
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div style={{ fontSize: 48, marginBottom: 12, filter: "drop-shadow(0 4px 8px rgba(212,27,44,0.15))" }}>💍</div>
-        <div style={{ fontSize: 28, fontWeight: 800, color: C.primary, letterSpacing: -0.5, marginBottom: 4 }}>Dhobi Metromani</div>
-        <div style={{ fontSize: 13, color: C.muted, letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 }}>धोबी मेट्रोमनी · ધોબી મેટ્રોમની</div>
+      <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <div style={{ fontSize: 60, marginBottom: 12, filter: "drop-shadow(0 4px 12px rgba(0,0,0,0.4))" }}>💍</div>
+        <div style={{ fontSize: 30, fontWeight: 800, color: "#fff", fontFamily: "Georgia, serif", letterSpacing: 0.5, marginBottom: 4 }}>Dhobi Matrimony</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", letterSpacing: 3, textTransform: "uppercase", marginBottom: 6 }}>धोबी मैट्रिमोनी · ધોબી મેત્રીમોની</div>
+        <div style={{ width: 60, height: 2, background: "linear-gradient(90deg, transparent, #C8960C, transparent)", margin: "0 auto" }} />
       </div>
 
       {/* Card */}
-      <div className="shaadi-card-shadow" style={{
-        background: C.card,
-        border: `1px solid ${C.border}`,
-        borderRadius: 20,
+      <div style={{
+        background: "rgba(255,255,255,0.06)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: 24,
         padding: "32px 24px",
         maxWidth: 400,
         width: "100%",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
       }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Choose Your Language</div>
-          <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.5 }}>अपनी भाषा चुनें · ભાષા પસંદ કરો</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: "#fff", marginBottom: 6 }}>Choose Your Language</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>अपनी भाषा चुनें · ભાષા પસંદ કરો</div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {langs.map(({ code, flag, native, english, sub }) => {
             const isSelected = selected === code;
             return (
@@ -5052,41 +5031,45 @@ function LanguageSplashScreen({ onSelect }: { onSelect: (l: LangCode) => void })
                   display: "flex",
                   alignItems: "center",
                   gap: 16,
-                  padding: "16px 20px",
-                  borderRadius: 12,
-                  border: `1.5px solid ${isSelected ? C.primary : C.border}`,
-                  background: isSelected ? `${C.primary}08` : C.white,
+                  padding: "18px 20px",
+                  borderRadius: 16,
+                  border: `2px solid ${isSelected ? "#C8960C" : "rgba(255,255,255,0.15)"}`,
+                  background: isSelected
+                    ? "linear-gradient(135deg, rgba(200,150,12,0.25), rgba(200,150,12,0.1))"
+                    : "rgba(255,255,255,0.05)",
                   cursor: animating ? "not-allowed" : "pointer",
                   textAlign: "left",
                   transition: "all 0.2s ease",
                   transform: isSelected ? "scale(1.02)" : "scale(1)",
+                  boxShadow: isSelected ? "0 4px 20px rgba(200,150,12,0.3)" : "none",
+                  fontFamily: "'Segoe UI', sans-serif",
                   width: "100%",
                 }}
-                onMouseEnter={e => { if (!isSelected && !animating) (e.currentTarget as HTMLButtonElement).style.borderColor = C.primaryLight; }}
-                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.borderColor = C.border; }}
+                onMouseEnter={e => { if (!isSelected && !animating) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
+                onMouseLeave={e => { if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.05)"; }}
               >
-                <div style={{ fontSize: 32 }}>{flag}</div>
+                <div style={{ fontSize: 36 }}>{flag}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: isSelected ? C.primary : C.text, lineHeight: 1.2 }}>{native}</div>
-                  <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{sub}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#fff", lineHeight: 1.2 }}>{native}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 2 }}>{sub}</div>
                 </div>
                 {isSelected && (
-                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14 }}>✓</div>
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#C8960C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✓</div>
                 )}
               </button>
             );
           })}
         </div>
 
-        <div style={{ marginTop: 24, textAlign: "center", fontSize: 12, color: C.subtle, lineHeight: 1.6 }}>
-          You can change language anytime from settings
+        <div style={{ marginTop: 24, textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.35)", lineHeight: 1.7 }}>
+          You can change language anytime from the app settings
           <br/>आप सेटिंग्स में कभी भी बदल सकते हैं
         </div>
       </div>
 
       {/* Bottom tagline */}
       <div style={{ marginTop: 32, textAlign: "center" }}>
-        <div style={{ fontSize: 13, color: C.muted, fontWeight: 500 }}>Premium Matrimonial for the Dhobi Community</div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", letterSpacing: 1 }}>🌸 Trusted matrimonial for Dhobi community 🌸</div>
       </div>
     </div>
   );

@@ -115,7 +115,7 @@ export default function StatsSection({ users, subscriptions, reports }: StatsSec
           <div className="flex justify-between items-center mb-4">
             <div>
               <h4 className="font-serif font-semibold text-lg text-[#2d2d2d]">Monthly Registration Trend</h4>
-              <p className="text-xs text-[#718096]">Dhobi Metromani user growth overview</p>
+              <p className="text-xs text-[#718096]">Dhobi Matrimony user growth overview</p>
             </div>
             <div className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full font-medium">
               <TrendingUp className="w-3.5 h-3.5" />
@@ -241,7 +241,7 @@ export default function StatsSection({ users, subscriptions, reports }: StatsSec
           </div>
 
           <div className="text-xs text-center text-[#D4AF37] bg-[#800000]/5 rounded-lg py-2 font-serif font-bold">
-            Dhobi Metromani Matrimonial Database System
+            Dhobi Matrimony Matrimonial Database System
           </div>
         </div>
 

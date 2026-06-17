@@ -38,9 +38,9 @@ export default function CMSSection({
   const [aContent, setAContent] = useState('');
 
   // Help Pages State
-  const [helpTitle, setHelpTitle] = useState('Dhobi Metromani Matchmaking FAQ');
+  const [helpTitle, setHelpTitle] = useState('Dhobi Matrimony Matchmaking FAQ');
   const [helpContent, setHelpContent] = useState(
-    'How do I request matches inside "Dhobi Metromani"?\n\nSimply browse the curated feed filtered by candidate preferences, religious sectors, backgrounds, and qualifications. When both matrimonial candidates state mutual consent ("swipe up" or "tap interest"), our system coordinates a secure live Match Chat.\n\nIs registration 100% secure?\n\nYes. Profile verifications rely on authentic administrative checks. All fake claims or abuse report filings instantly trigger moderator review and potential database isolation (bans).'
+    'How do I request matches inside "Dhobi Matrimony"?\n\nSimply browse the curated feed filtered by candidate preferences, religious sectors, backgrounds, and qualifications. When both matrimonial candidates state mutual consent ("swipe up" or "tap interest"), our system coordinates a secure live Match Chat.\n\nIs registration 100% secure?\n\nYes. Profile verifications rely on authentic administrative checks. All fake claims or abuse report filings instantly trigger moderator review and potential database isolation (bans).'
   );
   const [helpSuccess, setHelpSuccess] = useState(false);
 

@@ -221,119 +221,28 @@ const DEFAULT_USERS: MatrimonyUser[] = [
 import mongoose from 'mongoose';
 
 // MongoDB Schemas
-// MongoDB Schemas with Validation & Indexing for Scalability
-const userSchema = new mongoose.Schema({
-  uid: { type: String, required: true, unique: true, index: true },
-  email: { type: String, required: true, index: true, lowercase: true, trim: true },
-  name: { type: String, trim: true },
-  gender: { type: String, enum: ['male', 'female'], index: true },
-  dob: String,
-  age: Number,
-  height: String,
-  profileFor: String,
-  motherTongue: String,
-  religion: { type: String, index: true },
-  caste: { type: String, index: true },
-  education: String,
-  institute: String,
-  jobType: String,
-  salary: String,
-  diet: String,
-  challenged: String,
-  maritalStatus: String,
-  location: String,
-  profilePhoto: String,
-  about: String,
-  status: { type: String, required: true, default: 'pending', index: true },
-  isVerified: { type: Boolean, required: true, default: false, index: true },
-  membership: { type: String, required: true, default: 'free' },
-  createdAt: { type: String, required: true, index: true },
-  idType: String,
-  idNumber: String,
-  verificationSelfie: String,
-  governmentIdType: String,
-  governmentIdUrl: String,
-  phone: String,
-  whatsapp: String,
-  socialLinks: String,
-  blockedUsers: [String],
-  mutedUsers: [String],
-  timeOfBirth: String,
-  placeOfBirth: String,
-  rashi: String,
-  hobbies: String,
-  fatherName: String,
-  fatherOccupation: String,
-  motherName: String,
-  motherOccupation: String,
-  contactPerson: String
-}, { strict: false }); // strict: false allows legacy fields but we still index the common ones
+const userSchema = new mongoose.Schema({}, { strict: false });
 const User = mongoose.model('User', userSchema);
 
-const interestSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  senderId: { type: String, required: true, index: true },
-  receiverId: { type: String, required: true, index: true },
-  status: { type: String, enum: ['pending', 'accepted', 'rejected'], required: true, index: true },
-  createdAt: { type: String, required: true }
-}, { strict: false });
-interestSchema.index({ senderId: 1, receiverId: 1 }, { unique: true }); // Prevent duplicate requests
+const interestSchema = new mongoose.Schema({}, { strict: false });
 const Interest = mongoose.model('Interest', interestSchema);
 
-const messageSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  senderId: { type: String, required: true, index: true },
-  receiverId: { type: String, required: true, index: true },
-  text: { type: String, required: true },
-  timestamp: { type: String, required: true, index: true }
-}, { strict: false });
-messageSchema.index({ senderId: 1, receiverId: 1, timestamp: -1 }); // Optimized for chat history
+const messageSchema = new mongoose.Schema({}, { strict: false });
 const Message = mongoose.model('Message', messageSchema);
 
-const sessionSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  uid: { type: String, required: true, index: true },
-  token: { type: String, required: true },
-  deviceInfo: String,
-  ipAddress: String,
-  createdAt: { type: String, required: true },
-  lastActive: String,
-  isActive: { type: Boolean, default: true, index: true }
-}, { strict: false });
+const sessionSchema = new mongoose.Schema({}, { strict: false });
 const Session = mongoose.model('Session', sessionSchema);
 
-const reportSchema = new mongoose.Schema({
-  reportId: { type: String, required: true, unique: true },
-  reporterId: { type: String, required: true, index: true },
-  reportedUserId: { type: String, required: true, index: true },
-  type: String,
-  details: String,
-  status: { type: String, default: 'pending', index: true },
-  createdAt: { type: String, required: true }
-}, { strict: false });
+const reportSchema = new mongoose.Schema({}, { strict: false });
 const Report = mongoose.model('Report', reportSchema);
 
-const auditLogSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  adminId: { type: String, required: true },
-  action: String,
-  targetId: String,
-  details: String,
-  timestamp: { type: String, required: true, index: -1 }
-}, { strict: false });
+const auditLogSchema = new mongoose.Schema({}, { strict: false });
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);
 
-const adminNotificationSchema = new mongoose.Schema({
-  id: { type: String, required: true, unique: true },
-  type: String,
-  message: String,
-  targetId: String,
-  read: { type: Boolean, default: false, index: true },
-  createdAt: { type: String, required: true, index: -1 }
-}, { strict: false });
+const adminNotificationSchema = new mongoose.Schema({}, { strict: false });
 const AdminNotification = mongoose.model('AdminNotification', adminNotificationSchema);
 
-const adminSettingsSchema = new mongoose.Schema({ key: { type: String, index: true }, value: mongoose.Schema.Types.Mixed }, { strict: false });
+const adminSettingsSchema = new mongoose.Schema({ key: String, value: mongoose.Schema.Types.Mixed }, { strict: false });
 const AdminSettings = mongoose.model('AdminSettings', adminSettingsSchema);
 
 class MongoUserDb {
@@ -394,7 +303,7 @@ class MongoUserDb {
   async getAdminCredentials() {
     const doc = await AdminSettings.findOne({ key: 'admin_credentials' }).lean();
     if (doc && doc.value) return doc.value;
-    return { email: 'admin@dhobimetromani.com', password: 'DhobiMetromani@Admin#2026!' };
+    return { email: 'admin@dhobimatrimony.com', password: 'DhobiMatrimony@Admin#2026!' };
   }
   
   async setAdminCredentials(email, password) {
@@ -516,7 +425,7 @@ class LocalUserDb {
   }
   async getAdminCredentials() {
     if (this.data.adminCredentials) return this.data.adminCredentials;
-    return { email: 'admin@dhobimetromani.com', password: 'DhobiMetromani@Admin#2026!' };
+    return { email: 'admin@dhobimatrimony.com', password: 'DhobiMatrimony@Admin#2026!' };
   }
   async setAdminCredentials(email, password) {
     this.data.adminCredentials = { email, password };
@@ -526,12 +435,7 @@ class LocalUserDb {
 
 let userDb;
 if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI, {
-    maxPoolSize: 50, // Maintain up to 50 socket connections
-    serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-    socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  }).then(() => console.log('[MongoDB] Connected successfully, pooling configured'))
-    .catch(err => console.error('[MongoDB] Error:', err));
+  mongoose.connect(process.env.MONGODB_URI).then(() => console.log('[MongoDB] Connected successfully')).catch(err => console.error('[MongoDB] Error:', err));
   userDb = new MongoUserDb();
 } else {
   console.log('[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.');
@@ -556,7 +460,7 @@ setInterval(cleanExpiredOtps, 60 * 1000);
 // --- NODEMAILER EMAIL PROVIDER ---
 
 interface EmailProvider {
-  sendOtp(email: string, otp: string): Promise<void>;
+  sendOtp(email: string, otp: string): Promise<boolean>;
   reinitTransporter(): void;
 }
 
@@ -590,8 +494,8 @@ class NodemailerEmailProvider implements EmailProvider {
     this.init();
   }
 
-  async sendOtp(email: string, otp: string): Promise<void> {
-    const from = process.env.SMTP_FROM || 'Dhobi Metromani <noreply@dhobimetromani.com>';
+  async sendOtp(email: string, otp: string): Promise<boolean> {
+    const from = process.env.SMTP_FROM || 'Dhobi Matrimony <noreply@dhobimatrimony.com>';
     const subject = 'Verify Your Email';
     
     const html = `
@@ -655,7 +559,7 @@ class NodemailerEmailProvider implements EmailProvider {
       <body>
         <div class="container">
           <div class="header">
-            <h1 class="title">Dhobi Metromani</h1>
+            <h1 class="title">Dhobi Matrimony</h1>
           </div>
           <p>Hello,</p>
           <p>Your verification code is:</p>
@@ -664,7 +568,7 @@ class NodemailerEmailProvider implements EmailProvider {
           <p>If you did not request this code, please ignore this email.</p>
           <div class="footer">
             Regards,<br>
-            <strong>Dhobi Metromani</strong>
+            <strong>Dhobi Matrimony</strong>
           </div>
         </div>
       </body>
@@ -677,11 +581,11 @@ class NodemailerEmailProvider implements EmailProvider {
           from,
           to: email,
           subject,
-          text: `Hello,\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this code, please ignore this email.\n\nRegards,\nDhobi Metromani`,
+          text: `Hello,\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this code, please ignore this email.\n\nRegards,\nDhobi Matrimony`,
           html,
         });
         console.log(`[EmailService] OTP email sent successfully to ${email}`);
-        return;
+        return true;
       } catch (err) {
         console.warn(`[EmailService] Nodemailer sendMail failed: ${err instanceof Error ? err.message : String(err)}. Falling back to console logging.`);
       }
@@ -703,6 +607,7 @@ class NodemailerEmailProvider implements EmailProvider {
     } catch (e) {
       console.error('[EmailService] Failed to write OTP to browser/otp.txt:', e);
     }
+    return false;
   }
 }
 
@@ -717,7 +622,7 @@ const sendGenericEmail = async (to: string, subject: string, html: string, text:
   if (transporter && process.env.SMTP_USER && process.env.SMTP_USER !== 'test@gmail.com') {
     try {
       await transporter.sendMail({
-        from: process.env.SMTP_FROM || `Dhobi Metromani <${process.env.SMTP_USER}>`,
+        from: process.env.SMTP_FROM || `Dhobi Matrimony <${process.env.SMTP_USER}>`,
         to, subject, html, text
       });
       console.log(`[Email] Sent "${subject}" to ${to}`);
@@ -752,9 +657,9 @@ td{padding:8px 12px;border-bottom:1px solid #f0f0f0;font-size:13px;}
 .footer{font-size:11px;color:#999;margin-top:20px;border-top:1px solid #eee;padding-top:12px;text-align:center;}
 </style></head><body>
 <div class="c">
-  <div class="h"><h1 class="t">💍 Dhobi Metromani — Admin Alert</h1></div>
+  <div class="h"><h1 class="t">💍 Dhobi Matrimony — Admin Alert</h1></div>
   <div class="b"><h3 style="color:#8B0000;">${title}</h3>${body}</div>
-  <div class="footer">Dhobi Metromani Admin System &bull; Auto-generated notification</div>
+  <div class="footer">Dhobi Matrimony Admin System &bull; Auto-generated notification</div>
 </div></body></html>`;
 
 const userEmailHtml = (title: string, body: string) => `
@@ -767,9 +672,9 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:#f7f7f7;margin:0;padding
 .footer{font-size:11px;color:#999;margin-top:20px;border-top:1px solid #eee;padding-top:12px;text-align:center;}
 </style></head><body>
 <div class="c">
-  <div class="h"><h1 class="t">💍 Dhobi Metromani</h1></div>
+  <div class="h"><h1 class="t">💍 Dhobi Matrimony</h1></div>
   <div class="b"><h3 style="color:#8B0000;">${title}</h3>${body}</div>
-  <div class="footer">You are receiving this email because you registered on Dhobi Metromani.<br>Do not reply to this email.</div>
+  <div class="footer">You are receiving this email because you registered on Dhobi Matrimony.<br>Do not reply to this email.</div>
 </div></body></html>`;
 
 
@@ -851,19 +756,20 @@ const authenticateToken = (req: AuthenticatedRequest, res: express.Response, nex
     return res.status(401).json({ success: false, message: 'Authorization token required.' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded: any) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded: any) => {
     if (err) {
       return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 
     // Double check session in database store
-    const activeSession = userDb.getSessions().find(s => s.token === token && s.status === 'active');
+    const sessions = await userDb.getSessions();
+    const activeSession = sessions.find(s => s.token === token && s.status === 'active');
     if (!activeSession) {
       return res.status(403).json({ success: false, message: 'Session has been revoked or expired.' });
     }
 
     if (new Date(activeSession.expiresAt) < new Date()) {
-      userDb.revokeSession(token);
+      await userDb.revokeSession(token);
       return res.status(403).json({ success: false, message: 'Session has expired.' });
     }
 
@@ -936,7 +842,7 @@ async function startServer() {
   app.get('/api/health', (req, res) => {
     res.json({
       status: 'healthy',
-      system: 'Dhobi Metromani Admin API',
+      system: 'Dhobi Matrimony Admin API',
       timestamp: new Date().toISOString()
     });
   });
@@ -1040,8 +946,8 @@ async function startServer() {
     // Send user email
     sendUserEmail(
       rawUserData.email,
-      '✅ Your Profile Has Been Submitted — Dhobi Metromani',
-      userEmailHtml('Profile Submitted Successfully!', `<p>Dear ${rawUserData.name || 'Candidate'},</p><p>Your profile has been successfully submitted on <strong>Dhobi Metromani</strong>. Our team will review your profile and verify your documents.</p><p style="background:#fef9c3;padding:12px;border-radius:8px;">⏳ Verification may take <strong>24–48 hours</strong>. You will receive an email once your profile is approved.</p><p>While waiting, you can log in to view your profile status at any time.</p>`),
+      '✅ Your Profile Has Been Submitted — Dhobi Matrimony',
+      userEmailHtml('Profile Submitted Successfully!', `<p>Dear ${rawUserData.name || 'Candidate'},</p><p>Your profile has been successfully submitted on <strong>Dhobi Matrimony</strong>. Our team will review your profile and verify your documents.</p><p style="background:#fef9c3;padding:12px;border-radius:8px;">⏳ Verification may take <strong>24–48 hours</strong>. You will receive an email once your profile is approved.</p><p>While waiting, you can log in to view your profile status at any time.</p>`),
       `Your profile has been submitted. Verification may take 24-48 hours. You will be notified once approved.`
     );
 
@@ -1096,7 +1002,7 @@ async function startServer() {
         // Notify user about their update
         sendUserEmail(
           targetUser.email,
-          '✏️ Your Profile Has Been Updated — Dhobi Metromani',
+          '✏️ Your Profile Has Been Updated — Dhobi Matrimony',
           userEmailHtml('Profile Updated', `<p>Dear ${targetUser.name || 'User'},</p><p>Your profile has been updated successfully. The changes will be reviewed by our admin team.</p><p style="font-size:12px;color:#666;">If you did not make these changes, please contact us immediately.</p>`),
           `Your profile has been updated. Changes: ${fieldsDesc}`
         );
@@ -1104,11 +1010,11 @@ async function startServer() {
 
       // Send status emails if admin approved/rejected
       if (req.user!.role === 'admin' && updates.status === 'approved') {
-        sendUserEmail(targetUser.email, '🎉 Your Profile Has Been Approved! — Dhobi Metromani',
-          userEmailHtml('Profile Approved!', `<p>Dear ${targetUser.name || 'User'},</p><p>Congratulations! 🎉 Your profile on <strong>Dhobi Metromani</strong> has been <strong style="color:#006600;">approved and verified</strong>.</p><p>You can now log in and browse potential matches from the Dhobi community.</p>`),
+        sendUserEmail(targetUser.email, '🎉 Your Profile Has Been Approved! — Dhobi Matrimony',
+          userEmailHtml('Profile Approved!', `<p>Dear ${targetUser.name || 'User'},</p><p>Congratulations! 🎉 Your profile on <strong>Dhobi Matrimony</strong> has been <strong style="color:#006600;">approved and verified</strong>.</p><p>You can now log in and browse potential matches from the Dhobi community.</p>`),
           `Your profile has been approved! You can now log in and find matches.`);
       } else if (req.user!.role === 'admin' && updates.status === 'blocked') {
-        sendUserEmail(targetUser.email, 'Your Profile Status Has Changed — Dhobi Metromani',
+        sendUserEmail(targetUser.email, 'Your Profile Status Has Changed — Dhobi Matrimony',
           userEmailHtml('Profile Status Update', `<p>Dear ${targetUser.name || 'User'},</p><p>Your profile status has been updated by our admin team. Please contact support for more information.</p>`),
           `Your profile status has been updated. Please contact support.`);
       }
@@ -1170,7 +1076,7 @@ async function startServer() {
           return `SMTP_PASS="${smtpPass}"`;
         }
         if (key === 'SMTP_FROM') {
-          return `SMTP_FROM="Dhobi Metromani <${smtpUser}>"`;
+          return `SMTP_FROM="Dhobi Matrimony <${smtpUser}>"`;
         }
         return line;
       });
@@ -1182,7 +1088,7 @@ async function startServer() {
         newLines.push(`SMTP_PASS="${smtpPass}"`);
       }
       if (!existingKeys.has('SMTP_FROM')) {
-        newLines.push(`SMTP_FROM="Dhobi Metromani <${smtpUser}>"`);
+        newLines.push(`SMTP_FROM="Dhobi Matrimony <${smtpUser}>"`);
       }
       envContent = newLines.join('\n');
 
@@ -1193,7 +1099,7 @@ async function startServer() {
       // Update runtime environment variables
       process.env.SMTP_USER = smtpUser;
       process.env.SMTP_PASS = smtpPass;
-      process.env.SMTP_FROM = `Dhobi Metromani <${smtpUser}>`;
+      process.env.SMTP_FROM = `Dhobi Matrimony <${smtpUser}>`;
 
       // Reload transporter
       emailProvider.reinitTransporter();
@@ -1379,13 +1285,13 @@ async function startServer() {
       otpRequests.set(cleanEmail, recentRequests);
 
       // Dispatch Email
-      await emailProvider.sendOtp(cleanEmail, otp);
+      const emailSent = await emailProvider.sendOtp(cleanEmail, otp);
 
-      // Under local sandbox / placeholder config, return code in response body to ease developer testing
-      const isDebug = !process.env.SMTP_USER || process.env.SMTP_USER === 'test@gmail.com' || process.env.SMTP_USER.includes('your-email');
+      // Under local sandbox / placeholder config, or if email delivery failed, return code in response body to ease developer testing
+      const isDebug = !process.env.SMTP_USER || process.env.SMTP_USER === 'test@gmail.com' || process.env.SMTP_USER.includes('your-email') || !emailSent;
       return res.status(200).json({
         success: true,
-        message: 'OTP sent successfully',
+        message: emailSent ? 'OTP sent successfully' : 'OTP generated (Email delivery failed, returned in response for testing)',
         otp: isDebug ? otp : undefined
       });
 
@@ -1900,8 +1806,8 @@ async function startServer() {
   // --- ADMIN SECURITY MANAGEMENT ENDPOINTS ---
 
   // Admin session lists monitoring
-  app.get('/api/admin/sessions', authenticateToken, requireAdmin, (req, res) => {
-    const sessions = userDb.getSessions();
+  app.get('/api/admin/sessions', authenticateToken, requireAdmin, async (req, res) => {
+    const sessions = await userDb.getSessions();
     res.json({ success: true, sessions });
   });
 

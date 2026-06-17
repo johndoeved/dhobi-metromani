@@ -96,7 +96,7 @@ export default function NotificationSection({ notifications }: NotificationSecti
         <div className="minimal-card-accent">
           <h4 className="font-serif font-bold text-lg text-[#800000]">Draft Push Announcement</h4>
           <p className="text-xs text-[#718096]">
-            Publish Firebase Cloud Messaging (FCM) live alerts instantly visible in the Dhobi Metromani Android app.
+            Publish Firebase Cloud Messaging (FCM) live alerts instantly visible in the Dhobi Matrimony Android app.
           </p>
         </div>
 
