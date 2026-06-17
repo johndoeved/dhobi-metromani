@@ -433,22 +433,34 @@ class LocalUserDb {
   }
 }
 
+// Hardcoded admin fallback credentials (always available, even without MongoDB)
+const ADMIN_FALLBACK_EMAIL = 'admin@dhobimatrimony.com';
+const ADMIN_FALLBACK_PASSWORD = 'DhobiMatrimony@Admin#2026!';
+
+// In-memory admin session store (fallback when MongoDB is unavailable)
+const adminSessionStore = new Map<string, any>();
+
+let mongoConnected = false;
 let userDb;
 if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI).then(async () => {
+  mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 }).then(async () => {
+    mongoConnected = true;
     console.log('[MongoDB] Connected successfully');
     try {
       // Force sync of rebranded admin credentials
       await AdminSettings.findOneAndUpdate(
         { key: 'admin_credentials' },
-        { value: { email: 'admin@dhobimatrimony.com', password: 'DhobiMatrimony@Admin#2026!' } },
+        { value: { email: ADMIN_FALLBACK_EMAIL, password: ADMIN_FALLBACK_PASSWORD } },
         { upsert: true }
       );
       console.log('[MongoDB] Admin settings synchronized.');
     } catch (e) {
       console.error('[MongoDB] Failed to sync admin credentials:', e);
     }
-  }).catch(err => console.error('[MongoDB] Error:', err));
+  }).catch(err => {
+    mongoConnected = false;
+    console.error('[MongoDB] Error connecting (will use in-memory fallback for admin):', err.message);
+  });
   userDb = new MongoUserDb();
 } else {
   console.log('[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.');
@@ -826,8 +838,31 @@ const authenticateToken = (req: AuthenticatedRequest, res: express.Response, nex
       return res.status(403).json({ success: false, message: 'Invalid or expired token.' });
     }
 
-    // Double check session in database store
-    const sessions = await userDb.getSessions();
+    // FAST PATH: Check in-memory admin session store first (no DB needed)
+    const inMemorySession = adminSessionStore.get(token);
+    if (inMemorySession && inMemorySession.status === 'active') {
+      if (new Date(inMemorySession.expiresAt) < new Date()) {
+        adminSessionStore.delete(token);
+        return res.status(403).json({ success: false, message: 'Session has expired.' });
+      }
+      inMemorySession.lastUsedAt = new Date().toISOString();
+      req.user = { uid: decoded.uid, email: decoded.email, role: decoded.role || 'user' };
+      req.sessionToken = token;
+      return next();
+    }
+
+    // FALLBACK: Check database session store
+    let sessions: any[] = [];
+    try {
+      sessions = await Promise.race([
+        userDb.getSessions(),
+        new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+      ]) as any[];
+    } catch (e) {
+      // If DB session lookup times out, reject (user must re-login)
+      return res.status(403).json({ success: false, message: 'Session verification timed out. Please login again.' });
+    }
+
     const activeSession = sessions.find(s => s.token === token && s.status === 'active');
     if (!activeSession) {
       return res.status(403).json({ success: false, message: 'Session has been revoked or expired.' });
@@ -846,6 +881,7 @@ const authenticateToken = (req: AuthenticatedRequest, res: express.Response, nex
       email: decoded.email,
       role: decoded.role || 'user'
     };
+
     req.sessionToken = token;
     next();
   });
@@ -1179,34 +1215,61 @@ async function startServer() {
 
   // --- AUTHENTICATION & LOGIN FLOW ENDPOINTS ---
 
-  // Admin login API
+  // Admin login API - uses hardcoded fallback credentials to bypass MongoDB timeout
   app.post('/api/auth/admin-login', apiRateLimiter(15 * 60 * 1000, 5, 'Too many login attempts. Please wait 15 minutes.'), async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
-    const adminCreds = await userDb.getAdminCredentials();
-    if (email.trim().toLowerCase() === adminCreds.email.toLowerCase() && password === adminCreds.password) {
+    const emailLower = email.trim().toLowerCase();
+
+    // FAST PATH: Check hardcoded fallback credentials first (works even without MongoDB)
+    const isFallbackAdmin = emailLower === ADMIN_FALLBACK_EMAIL.toLowerCase() && password === ADMIN_FALLBACK_PASSWORD;
+
+    // Also check MongoDB-stored credentials if connected (async, non-blocking check)
+    let isDbAdmin = false;
+    if (!isFallbackAdmin && mongoConnected) {
+      try {
+        const adminCreds = await Promise.race([
+          userDb.getAdminCredentials(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]) as any;
+        isDbAdmin = emailLower === adminCreds.email.toLowerCase() && password === adminCreds.password;
+      } catch (e) {
+        console.warn('[AdminLogin] DB credential check timed out, using fallback only.');
+      }
+    }
+
+    if (isFallbackAdmin || isDbAdmin) {
       const token = jwt.sign(
-        { uid: 'admin', email: 'admin@dhobimetromani.com', role: 'admin' },
+        { uid: 'admin', email: ADMIN_FALLBACK_EMAIL, role: 'admin' },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
 
       const now = new Date();
-      userDb.createSession({
+      const sessionData = {
         id: `sess_admin_${Date.now()}`,
         uid: 'admin',
         token,
         deviceInfo: req.headers['user-agent'] || 'Unknown Admin Device',
-        ip: req.ip || req.headers['x-forwarded-for'] as string || '127.0.0.1',
+        ip: (req.headers['x-forwarded-for'] as string) || req.ip || '127.0.0.1',
         status: 'active',
         createdAt: now.toISOString(),
         expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         lastUsedAt: now.toISOString()
-      });
+      };
 
+      // Always store in in-memory store for instant lookup
+      adminSessionStore.set(token, sessionData);
+
+      // Also persist to DB if connected (best-effort, non-blocking)
+      if (mongoConnected) {
+        userDb.createSession(sessionData).catch(e => console.warn('[AdminLogin] Could not persist session to DB:', e.message));
+      }
+
+      console.log(`[AdminLogin] Admin logged in successfully via ${isFallbackAdmin ? 'fallback' : 'DB'} credentials.`);
       return res.json({
         success: true,
         token,
