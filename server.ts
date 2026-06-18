@@ -247,7 +247,7 @@ const AdminSettings = mongoose.model('AdminSettings', adminSettingsSchema);
 
 class MongoUserDb {
   async getAll() { return await User.find({}).lean(); }
-  async findByEmail(email) { return await User.findOne({ email: new RegExp('^' + email + '$', 'i') }).lean(); }
+  async findByEmail(email) { return await User.findOne({ $or: [{ email: new RegExp('^' + email + '$', 'i') }, { phone: new RegExp('^' + email + '$', 'i') }] }).lean(); }
   async findById(uid) { return await User.findOne({ uid }).lean(); }
   async create(user) { 
     const userData = { ...user };
@@ -344,7 +344,7 @@ class LocalUserDb {
   }
 
   async getAll() { return this.data.users; }
-  async findByEmail(email) { return this.data.users.find(u => u.email.toLowerCase() === email.toLowerCase()); }
+  async findByEmail(email) { return this.data.users.find(u => (u.email && u.email.toLowerCase() === email.toLowerCase()) || (u.phone && u.phone.replace(/[^0-9+]/g, '') === email.replace(/[^0-9+]/g, ''))); }
   async findById(uid) { return this.data.users.find(u => u.uid === uid); }
   async create(user) {
     const index = this.data.users.findIndex(u => u.uid === user.uid || u.email.toLowerCase() === user.email.toLowerCase());
