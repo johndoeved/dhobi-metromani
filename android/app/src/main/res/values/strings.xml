@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Dhobi Matrimony</string>
+    <string name="title_activity_main">Dhobi Matrimony</string>
+    <string name="package_name">com.dhobisamaj.metromany</string>
+    <string name="custom_url_scheme">com.dhobisamaj.metromany</string>
+</resources>

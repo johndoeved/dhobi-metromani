@@ -250,10 +250,14 @@ class MongoUserDb {
   async findByEmail(email) { return await User.findOne({ email: new RegExp('^' + email + '$', 'i') }).lean(); }
   async findById(uid) { return await User.findOne({ uid }).lean(); }
   async create(user) { 
-    await User.findOneAndUpdate({ uid: user.uid }, user, { upsert: true, new: true }); 
+    const userData = { ...user };
+    delete userData._id;
+    await User.findOneAndUpdate({ uid: user.uid }, userData, { upsert: true, new: true }); 
   }
   async update(uid, updates) {
-    const res = await User.updateOne({ uid }, { $set: updates });
+    const updateData = { ...updates };
+    delete updateData._id;
+    const res = await User.updateOne({ uid }, { $set: updateData });
     return res.modifiedCount > 0;
   }
   async delete(uid) {
@@ -441,30 +445,43 @@ const ADMIN_FALLBACK_PASSWORD = 'DhobiMatrimony@Admin#2026!';
 const adminSessionStore = new Map<string, any>();
 
 let mongoConnected = false;
-let userDb;
-if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 }).then(async () => {
-    mongoConnected = true;
-    console.log('[MongoDB] Connected successfully');
+let userDb: any;
+let dbInitialized = false;
+
+async function initDb() {
+  if (dbInitialized) return;
+  if (process.env.MONGODB_URI) {
     try {
-      // Force sync of rebranded admin credentials
-      await AdminSettings.findOneAndUpdate(
-        { key: 'admin_credentials' },
-        { value: { email: ADMIN_FALLBACK_EMAIL, password: ADMIN_FALLBACK_PASSWORD } },
-        { upsert: true }
-      );
-      console.log('[MongoDB] Admin settings synchronized.');
-    } catch (e) {
-      console.error('[MongoDB] Failed to sync admin credentials:', e);
+      console.log('[MongoDB] Connecting to database...');
+      mongoose.set('bufferCommands', false);
+      
+      await mongoose.connect(process.env.MONGODB_URI, { 
+        serverSelectionTimeoutMS: 4000
+      });
+      mongoConnected = true;
+      console.log('[MongoDB] Connected successfully');
+      try {
+        // Force sync of rebranded admin credentials
+        await AdminSettings.findOneAndUpdate(
+          { key: 'admin_credentials' },
+          { value: { email: ADMIN_FALLBACK_EMAIL, password: ADMIN_FALLBACK_PASSWORD } },
+          { upsert: true }
+        );
+        console.log('[MongoDB] Admin settings synchronized.');
+      } catch (e) {
+        console.error('[MongoDB] Failed to sync admin credentials:', e);
+      }
+      userDb = new MongoUserDb();
+    } catch (err: any) {
+      mongoConnected = false;
+      console.error('[MongoDB] Error connecting (falling back to Local JSON database):', err.message);
+      userDb = new LocalUserDb();
     }
-  }).catch(err => {
-    mongoConnected = false;
-    console.error('[MongoDB] Error connecting (will use in-memory fallback for admin):', err.message);
-  });
-  userDb = new MongoUserDb();
-} else {
-  console.log('[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.');
-  userDb = new LocalUserDb();
+  } else {
+    console.log('[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.');
+    userDb = new LocalUserDb();
+  }
+  dbInitialized = true;
 }
 
 // In-memory OTP store
@@ -529,13 +546,10 @@ class NodemailerEmailProvider implements EmailProvider {
           to,
           subject,
           text,
-          priority: 'high',
-          headers: {
-            'X-Priority': '1',
-            'X-MSMail-Priority': 'High',
-            'Importance': 'high',
-            'Precedence': 'transactional'
-          }
+           headers: {
+             'Precedence': 'transactional',
+             'X-Auto-Response-Suppress': 'All'
+           }
         });
         console.log(`[EmailService] Email sent successfully to ${to}`);
         return true;
@@ -549,7 +563,7 @@ class NodemailerEmailProvider implements EmailProvider {
 
   async sendOtp(email: string, otp: string): Promise<boolean> {
     const from = process.env.SMTP_FROM || 'Dhobi Matrimony <dhobimetromany@gmail.com>';
-    const subject = 'Your Dhobi Matrimony Verification Code';
+    const subject = 'Sign In Verification Code - Dhobi Matrimony';
     
     const html = `
       <!DOCTYPE html>
@@ -557,75 +571,21 @@ class NodemailerEmailProvider implements EmailProvider {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Your Dhobi Matrimony Verification Code</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-            margin: 0;
-            padding: 20px;
-            color: #333333;
-          }
-          .container {
-            max-width: 550px;
-            background-color: #ffffff;
-            margin: 0 auto;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
-            border: 1px solid #e2e8f0;
-          }
-          .header {
-            text-align: center;
-            border-bottom: 2px solid #990000;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-          }
-          .title {
-            color: #990000;
-            font-family: Georgia, serif;
-            font-size: 24px;
-            font-weight: bold;
-            margin: 0;
-          }
-          .otp-box {
-            background-color: #f7f7f7;
-            border: 1px solid #D4AF37;
-            border-radius: 6px;
-            padding: 15px;
-            text-align: center;
-            font-size: 30px;
-            font-weight: bold;
-            letter-spacing: 4px;
-            color: #990000;
-            margin: 25px 0;
-          }
-          .footer {
-            font-size: 11px;
-            color: #888888;
-            margin-top: 30px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 15px;
-            line-height: 1.5;
-          }
-        </style>
+        <title>Verification Code - Dhobi Matrimony</title>
       </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 class="title">Dhobi Matrimony</h1>
-          </div>
+      <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #333333; margin: 0; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #333333; margin-top: 0;">Dhobi Matrimony</h2>
           <p>Dear Member,</p>
-          <p>Your one-time email verification code is:</p>
-          <div class="otp-box">${otp}</div>
-          <p>This code will expire in 5 minutes. For security reasons, please do not share this verification code with anyone.</p>
-          <p>If you did not request this verification code, you can safely ignore this email.</p>
-          <div class="footer">
-            Best regards,<br>
-            <strong>Dhobi Matrimony Security Team</strong><br>
-            <span style="font-size: 10px; color: #aaaaaa;">This is an automated transactional security email. Please do not reply.</span>
+          <p>Your verification code is:</p>
+          <div style="background-color: #f7f7f7; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 4px;">
+            ${otp}
           </div>
+          <p>This code will expire in 5 minutes. Do not share this code with anyone.</p>
+          <p style="font-size: 12px; color: #888888; margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+            This is an automated transactional security email. Please do not reply.<br>
+            Dhobi Matrimony Security Team
+          </p>
         </div>
       </body>
       </html>
@@ -639,13 +599,12 @@ class NodemailerEmailProvider implements EmailProvider {
           subject,
           text: `Hello,\n\nYour verification code is: ${otp}\n\nThis code will expire in 5 minutes.\n\nIf you did not request this code, please ignore this email.\n\nRegards,\nDhobi Matrimony Security Team`,
           html,
-          priority: 'high',
-          headers: {
-            'X-Priority': '1',
-            'X-MSMail-Priority': 'High',
-            'Importance': 'high',
-            'Precedence': 'transactional'
-          }
+           headers: {
+             'Message-ID': `<${Date.now()}.${Math.random().toString(36).substring(2)}@${from.split('@')[1] ? from.split('@')[1].replace('>', '') : 'dhobimatrimony.com'}>`,
+             'Precedence': 'transactional',
+             'X-Auto-Response-Suppress': 'All',
+             'X-Priority': '3'
+           }
         });
         console.log(`[EmailService] OTP email sent successfully to ${email}`);
         return true;
@@ -675,6 +634,59 @@ class NodemailerEmailProvider implements EmailProvider {
 }
 
 const emailProvider: EmailProvider = new NodemailerEmailProvider();
+
+// --- TWILIO SMS & WHATSAPP BACKUP HELPER ---
+
+async function sendTwilioMessage(to: string, bodyText: string, isWhatsApp: boolean = false): Promise<boolean> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+  const twilioWhatsApp = process.env.TWILIO_WHATSAPP_NUMBER || twilioPhone;
+
+  if (!accountSid || !authToken || !twilioPhone) {
+    console.warn('[TwilioService] Missing Twilio credentials. Skipping real SMS/WhatsApp send.');
+    return false;
+  }
+
+  // Ensure phone numbers have country prefix (default to +91 for India if not present)
+  let cleanTo = to.trim().replace(/[\s-()]/g, '');
+  if (!cleanTo.startsWith('+')) {
+    cleanTo = `+91${cleanTo}`;
+  }
+
+  const from = isWhatsApp ? `whatsapp:${twilioWhatsApp}` : twilioPhone;
+  const targetTo = isWhatsApp ? `whatsapp:${cleanTo}` : cleanTo;
+
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+  const body = new URLSearchParams({
+    From: from,
+    To: targetTo,
+    Body: bodyText
+  });
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: body.toString()
+    });
+    const data = await response.json();
+    if (response.ok) {
+      console.log(`[TwilioService] Sent ${isWhatsApp ? 'WhatsApp' : 'SMS'} successfully: ${data.sid}`);
+      return true;
+    } else {
+      console.warn(`[TwilioService] Twilio API Error: ${data.message || response.statusText}`);
+      return false;
+    }
+  } catch (err) {
+    console.error('[TwilioService] HTTP request failed:', err);
+    return false;
+  }
+}
 
 // --- EMAIL HELPER FUNCTIONS ---
 
@@ -890,7 +902,7 @@ const authenticateToken = (req: AuthenticatedRequest, res: express.Response, nex
     let sessions: any[] = [];
     try {
       sessions = await Promise.race([
-        userDb.getSessions(),
+        await userDb.getSessions(),
         new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
       ]) as any[];
     } catch (e) {
@@ -909,7 +921,7 @@ const authenticateToken = (req: AuthenticatedRequest, res: express.Response, nex
     }
 
     // Refresh last active timestamp
-    userDb.updateSessionLastUsed(token);
+    await userDb.updateSessionLastUsed(token);
 
     req.user = {
       uid: decoded.uid,
@@ -957,6 +969,7 @@ const apiRateLimiter = (windowMs: number, maxRequests: number, message: string) 
 // --- START EXPRESS APP ---
 
 async function startServer() {
+  await initDb();
   const app = express();
 
   app.use(express.json({ limit: '10mb' }));
@@ -1093,72 +1106,77 @@ async function startServer() {
   });
 
   app.post('/api/users/update', authenticateToken, async (req: AuthenticatedRequest, res) => {
-    const { uid, updates, changedFields } = req.body;
-    if (!uid || !updates) {
-      return res.status(400).json({ error: 'Missing uid or updates' });
-    }
-    if (req.user!.role !== 'admin' && req.user!.uid !== uid) {
-      return res.status(403).json({ error: 'Access denied. You can only update your own profile.' });
-    }
-    if (updates.profilePhoto && !validateBase64Payload(updates.profilePhoto)) {
-      return res.status(400).json({ error: 'Invalid profile photo file type. Supports images under 5MB only.' });
-    }
-    if (updates.governmentIdUrl && !validateBase64Payload(updates.governmentIdUrl)) {
-      return res.status(400).json({ error: 'Invalid document upload. Supports images/PDFs under 5MB only.' });
-    }
-    if (isUnder18(updates.age, updates.dob)) {
-      return res.status(403).json({ error: 'You must be at least 18 years old to use this service.' });
-    }
-    const sanitizedUpdates = sanitizeUserData(updates);
-    const targetUser = await userDb.findById(uid);
-    const updated = await userDb.update(uid, sanitizedUpdates);
+    try {
+      const { uid, updates, changedFields } = req.body;
+      if (!uid || !updates) {
+        return res.status(400).json({ error: 'Missing uid or updates' });
+      }
+      if (req.user!.role !== 'admin' && req.user!.uid !== uid) {
+        return res.status(403).json({ error: 'Access denied. You can only update your own profile.' });
+      }
+      if (updates.profilePhoto && !validateBase64Payload(updates.profilePhoto)) {
+        return res.status(400).json({ error: 'Invalid profile photo file type. Supports images under 5MB only.' });
+      }
+      if (updates.governmentIdUrl && !validateBase64Payload(updates.governmentIdUrl)) {
+        return res.status(400).json({ error: 'Invalid document upload. Supports images/PDFs under 5MB only.' });
+      }
+      if (isUnder18(updates.age, updates.dob)) {
+        return res.status(403).json({ error: 'You must be at least 18 years old to use this service.' });
+      }
+      const sanitizedUpdates = sanitizeUserData(updates);
+      const targetUser = await userDb.findById(uid);
+      const updated = await userDb.update(uid, sanitizedUpdates);
 
-    if (updates.status === 'blocked') {
-      await userDb.revokeAllSessions(uid);
-    }
-
-    if (updated && targetUser) {
-      const actionBy = req.user!.role === 'admin' ? 'admin' : 'user';
-      const isUserSelfEdit = actionBy === 'user';
-
-      // Audit log
-      const fieldsDesc = changedFields ? changedFields.map((f: any) => `${f.field}: "${f.oldValue}" → "${f.newValue}"`).join(', ') : Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
-      await userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: new Date().toISOString(), userId: uid, userEmail: targetUser.email, action: isUserSelfEdit ? 'PROFILE_UPDATED_BY_USER' : 'PROFILE_UPDATED_BY_ADMIN', details: fieldsDesc, ip: (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown' });
-
-      if (isUserSelfEdit && changedFields && changedFields.length > 0) {
-        // Admin notification for user-initiated updates
-        const changedSummary = changedFields.map((f: any) => `${f.field} changed from "${f.oldValue}" to "${f.newValue}"`).join('\n');
-        await userDb.addNotification({ id: `n_${Date.now()}`, timestamp: new Date().toISOString(), type: 'profile_update', userId: uid, userName: targetUser.name || targetUser.email, userEmail: targetUser.email, summary: `Profile updated by ${targetUser.name || targetUser.email}`, details: changedSummary, read: false, changedFields });
-
-        const tableRows = changedFields.map((f: any) => `<tr><td><strong>${f.field}</strong></td><td style="color:#cc0000;">${f.oldValue || '(empty)'}</td><td style="color:#006600;">${f.newValue || '(empty)'}</td></tr>`).join('');
-        sendAdminEmail(
-          `✏️ Profile Updated — ${targetUser.name || targetUser.email}`,
-          adminEmailHtml('User Profile Update Alert', `<p>A user has updated their profile. Details below:</p><table><tr><th>Field</th><th>Previous Value</th><th>New Value</th></tr>${tableRows}</table><table><tr><th>User</th><th>ID</th><th>Email</th><th>Date & Time</th></tr><tr><td>${targetUser.name || 'N/A'}</td><td>${uid}</td><td>${targetUser.email}</td><td>${new Date().toLocaleString('en-IN')}</td></tr></table>`),
-          `Profile updated by ${targetUser.name || targetUser.email} (${uid}) at ${new Date().toLocaleString('en-IN')}. Changes: ${fieldsDesc}`
-        );
-
-        // Notify user about their update
-        sendUserEmail(
-          targetUser.email,
-          '✏️ Your Profile Has Been Updated — Dhobi Matrimony',
-          userEmailHtml('Profile Updated', `<p>Dear ${targetUser.name || 'User'},</p><p>Your profile has been updated successfully. The changes will be reviewed by our admin team.</p><p style="font-size:12px;color:#666;">If you did not make these changes, please contact us immediately.</p>`),
-          `Your profile has been updated. Changes: ${fieldsDesc}`
-        );
+      if (updates.status === 'blocked') {
+        await userDb.revokeAllSessions(uid);
       }
 
-      // Send status emails if admin approved/rejected
-      if (req.user!.role === 'admin' && updates.status === 'approved') {
-        sendUserEmail(targetUser.email, '🎉 Your Profile Has Been Approved! — Dhobi Matrimony',
-          userEmailHtml('Profile Approved!', `<p>Dear ${targetUser.name || 'User'},</p><p>Congratulations! 🎉 Your profile on <strong>Dhobi Matrimony</strong> has been <strong style="color:#006600;">approved and verified</strong>.</p><p>You can now log in and browse potential matches from the Dhobi community.</p>`),
-          `Your profile has been approved! You can now log in and find matches.`);
-      } else if (req.user!.role === 'admin' && updates.status === 'blocked') {
-        sendUserEmail(targetUser.email, 'Your Profile Status Has Changed — Dhobi Matrimony',
-          userEmailHtml('Profile Status Update', `<p>Dear ${targetUser.name || 'User'},</p><p>Your profile status has been updated by our admin team. Please contact support for more information.</p>`),
-          `Your profile status has been updated. Please contact support.`);
-      }
-    }
+      if (updated && targetUser) {
+        const actionBy = req.user!.role === 'admin' ? 'admin' : 'user';
+        const isUserSelfEdit = actionBy === 'user';
 
-    res.json({ success: updated });
+        // Audit log
+        const fieldsDesc = changedFields ? changedFields.map((f: any) => `${f.field}: "${f.oldValue}" → "${f.newValue}"`).join(', ') : Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
+        await userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: new Date().toISOString(), userId: uid, userEmail: targetUser.email, action: isUserSelfEdit ? 'PROFILE_UPDATED_BY_USER' : 'PROFILE_UPDATED_BY_ADMIN', details: fieldsDesc, ip: (req.headers['x-forwarded-for'] as string) || req.ip || 'unknown' });
+
+        if (isUserSelfEdit && changedFields && changedFields.length > 0) {
+          // Admin notification for user-initiated updates
+          const changedSummary = changedFields.map((f: any) => `${f.field} changed from "${f.oldValue}" to "${f.newValue}"`).join('\n');
+          await userDb.addNotification({ id: `n_${Date.now()}`, timestamp: new Date().toISOString(), type: 'profile_update', userId: uid, userName: targetUser.name || targetUser.email, userEmail: targetUser.email, summary: `Profile updated by ${targetUser.name || targetUser.email}`, details: changedSummary, read: false, changedFields });
+
+          const tableRows = changedFields.map((f: any) => `<tr><td><strong>${f.field}</strong></td><td style="color:#cc0000;">${f.oldValue || '(empty)'}</td><td style="color:#006600;">${f.newValue || '(empty)'}</td></tr>`).join('');
+          sendAdminEmail(
+            `✏️ Profile Updated — ${targetUser.name || targetUser.email}`,
+            adminEmailHtml('User Profile Update Alert', `<p>A user has updated their profile. Details below:</p><table><tr><th>Field</th><th>Previous Value</th><th>New Value</th></tr>${tableRows}</table><table><tr><th>User</th><th>ID</th><th>Email</th><th>Date & Time</th></tr><tr><td>${targetUser.name || 'N/A'}</td><td>${uid}</td><td>${targetUser.email}</td><td>${new Date().toLocaleString('en-IN')}</td></tr></table>`),
+            `Profile updated by ${targetUser.name || targetUser.email} (${uid}) at ${new Date().toLocaleString('en-IN')}. Changes: ${fieldsDesc}`
+          );
+
+          // Notify user about their update
+          sendUserEmail(
+            targetUser.email,
+            '✏️ Your Profile Has Been Updated — Dhobi Matrimony',
+            userEmailHtml('Profile Updated', `<p>Dear ${targetUser.name || 'User'},</p><p>Your profile has been updated successfully. The changes will be reviewed by our admin team.</p><p style="font-size:12px;color:#666;">If you did not make these changes, please contact us immediately.</p>`),
+            `Your profile has been updated. Changes: ${fieldsDesc}`
+          );
+        }
+
+        // Send status emails if admin approved/rejected
+        if (req.user!.role === 'admin' && updates.status === 'approved') {
+          sendUserEmail(targetUser.email, '🎉 Your Profile Has Been Approved! — Dhobi Matrimony',
+            userEmailHtml('Profile Approved!', `<p>Dear ${targetUser.name || 'User'},</p><p>Congratulations! 🎉 Your profile on <strong>Dhobi Matrimony</strong> has been <strong style="color:#006600;">approved and verified</strong>.</p><p>You can now log in and browse potential matches from the Dhobi community.</p>`),
+            `Your profile has been approved! You can now log in and find matches.`);
+        } else if (req.user!.role === 'admin' && updates.status === 'blocked') {
+          sendUserEmail(targetUser.email, 'Your Profile Status Has Changed — Dhobi Matrimony',
+            userEmailHtml('Profile Status Update', `<p>Dear ${targetUser.name || 'User'},</p><p>Your profile status has been updated by our admin team. Please contact support for more information.</p>`),
+            `Your profile status has been updated. Please contact support.`);
+        }
+      }
+
+      res.json({ success: !!updated });
+    } catch (error) {
+      console.error('[AuthService] Error updating user profile:', error);
+      res.status(500).json({ error: 'Internal server error while updating profile.' });
+    }
   });
 
   // Delete user profile
@@ -1269,7 +1287,7 @@ async function startServer() {
     if (!isFallbackAdmin && mongoConnected) {
       try {
         const adminCreds = await Promise.race([
-          userDb.getAdminCredentials(),
+          await userDb.getAdminCredentials(),
           new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
         ]) as any;
         isDbAdmin = emailLower === adminCreds.email.toLowerCase() && password === adminCreds.password;
@@ -1303,7 +1321,7 @@ async function startServer() {
 
       // Also persist to DB if connected (best-effort, non-blocking)
       if (mongoConnected) {
-        userDb.createSession(sessionData).catch(e => console.warn('[AdminLogin] Could not persist session to DB:', e.message));
+        await userDb.createSession(sessionData).catch(e => console.warn('[AdminLogin] Could not persist session to DB:', e.message));
       }
 
       console.log(`[AdminLogin] Admin logged in successfully via ${isFallbackAdmin ? 'fallback' : 'DB'} credentials.`);
@@ -1370,7 +1388,7 @@ async function startServer() {
     }
     try {
       const user = await Promise.race([
-        userDb.findById(req.user!.uid),
+        await userDb.findById(req.user!.uid),
         new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
       ]);
       if (!user) {
@@ -1383,31 +1401,36 @@ async function startServer() {
   });
 
   // Log out from current device
-  app.post('/api/auth/logout', authenticateToken, (req: AuthenticatedRequest, res) => {
-    userDb.revokeSession(req.sessionToken!);
+  app.post('/api/auth/logout', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    await userDb.revokeSession(req.sessionToken!);
     res.json({ success: true, message: 'Logged out successfully.' });
   });
 
   // Log out from all devices
-  app.post('/api/auth/logout-all', authenticateToken, (req: AuthenticatedRequest, res) => {
-    userDb.revokeAllSessions(req.user!.uid);
+  app.post('/api/auth/logout-all', authenticateToken, async (req: AuthenticatedRequest, res) => {
+    await userDb.revokeAllSessions(req.user!.uid);
     res.json({ success: true, message: 'Revoked all active sessions successfully.' });
   });
 
   // POST /api/auth/send-otp
   app.post('/api/auth/send-otp', apiRateLimiter(5 * 60 * 1000, 5, 'Too many OTP requests. Please wait a few minutes.'), async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.body; // 'email' can also be a phone number now
 
     if (!email) {
-      return res.status(400).json({ success: false, message: 'Email address is required.' });
+      return res.status(400).json({ success: false, message: 'Email address or Phone number is required.' });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    let cleanEmail = email.toLowerCase().trim();
+    const isPhone = /^[0-9+\-\s()]{10,15}$/.test(cleanEmail.replace(/[^0-9+]/g, ''));
 
-    // Validate email format
+    // Validate format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ success: false, message: 'Invalid email address format.' });
+    if (!isPhone && !emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Invalid email address or phone number format.' });
+    }
+
+    if (isPhone) {
+      cleanEmail = cleanEmail.replace(/[^0-9+]/g, '');
     }
 
     const now = Date.now();
@@ -1456,11 +1479,31 @@ async function startServer() {
       recentRequests.push(now);
       otpRequests.set(cleanEmail, recentRequests);
 
-      // Dispatch Email
-      const emailSent = await emailProvider.sendOtp(cleanEmail, otp);
+      // Dispatch Email or SMS
+      let messageSent = false;
+      if (isPhone) {
+        // Prepend +91 if missing and no other country code is provided
+        const phoneWithCode = cleanEmail.startsWith('+') ? cleanEmail : (cleanEmail.length === 10 ? '+91' + cleanEmail : '+' + cleanEmail);
+        messageSent = await sendTwilioMessage(phoneWithCode, `Your Dhobi Matrimony verification code is: ${otp}. Valid for 5 minutes.`);
+        if (!messageSent) {
+          console.warn('[AuthService] Twilio failed or not configured, relying on console logs.');
+        }
+      } else {
+        messageSent = await emailProvider.sendOtp(cleanEmail, otp);
+      }
 
-      // Under local sandbox / placeholder config, or if email delivery failed, return code in response body to ease developer testing
-      const isDebug = !process.env.SMTP_USER || process.env.SMTP_USER === 'test@gmail.com' || process.env.SMTP_USER.includes('your-email') || !emailSent;
+      // Under local sandbox / placeholder config, or if delivery failed, return code in response body to ease developer testing
+      const isEmailConfigured = !!process.env.SMTP_USER && process.env.SMTP_USER !== 'test@gmail.com';
+      const isTwilioConfigured = !!process.env.TWILIO_ACCOUNT_SID;
+      const isDebug = (!isEmailConfigured && !isPhone) || (!isTwilioConfigured && isPhone) || !messageSent;
+
+      // Save OTP to txt file for browser subagents/debugging
+      try {
+        const browserDir = process.env.BROWSER_DIR || path.join(process.cwd(), 'browser');
+        if (!fs.existsSync(browserDir)) fs.mkdirSync(browserDir, { recursive: true });
+        fs.writeFileSync(path.join(browserDir, 'otp.txt'), otp, 'utf8');
+      } catch (e) {}
+
       return res.status(200).json({
         success: true,
         message: emailSent ? 'OTP sent successfully' : 'OTP generated (Email delivery failed, returned in response for testing)',
@@ -1484,7 +1527,12 @@ async function startServer() {
       return res.status(400).json({ success: false, message: 'Email and OTP code are required.' });
     }
 
-    const cleanEmail = email.toLowerCase().trim();
+    let cleanEmail = email.toLowerCase().trim();
+    const isPhone = /^[0-9+\-\s()]{10,15}$/.test(cleanEmail.replace(/[^0-9+]/g, ''));
+    if (isPhone) {
+      cleanEmail = cleanEmail.replace(/[^0-9+]/g, '');
+    }
+
     const record = otpDb.get(cleanEmail);
 
     if (!record) {
@@ -1520,7 +1568,7 @@ async function startServer() {
       // Successful verification: invalidate OTP immediately
       otpDb.delete(cleanEmail);
 
-      let user = userDb.findByEmail(cleanEmail);
+      let user = await userDb.findByEmail(cleanEmail);
       let isNew = false;
 
       if (!user) {
@@ -1533,7 +1581,7 @@ async function startServer() {
           membership: 'free',
           createdAt: new Date().toISOString()
         };
-        userDb.create(user);
+        await userDb.create(user);
       }
 
       // Check if candidate account is disabled/blocked by admin
@@ -1557,7 +1605,7 @@ async function startServer() {
       // Persist active session in database
       const now = new Date();
       const sessionDurationMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-      userDb.createSession({
+      await userDb.createSession({
         id: `sess_${Date.now()}`,
         uid: user.uid,
         token,

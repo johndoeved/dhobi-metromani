@@ -897,7 +897,7 @@ export const downloadBioDataPdf = async (user: any, options: { template?: string
   } = options;
 
   // Dynamically import jsPDF and autoTable for reliable mobile+desktop PDF download
-  const jsPDFModule = await import("jspdf");
+  const jsPDFModule = await import("jspdf") as any;
   const jsPDF = jsPDFModule.jsPDF || (jsPDFModule.default && jsPDFModule.default.jsPDF) || jsPDFModule.default;
 
   const primaryColor: [number, number, number] = template === "royal" ? [139, 0, 0] : template === "modern" ? [26, 26, 26] : [139, 0, 0];
@@ -1417,8 +1417,9 @@ function EmailLoginScreen({ users, onUserLogin, onAdminLogin }) {
     if (!email) { setError(t("enterEmail")); return; }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError(t("invalidEmail"));
+    const isPhone = /^[0-9+\-\s()]{10,15}$/.test(email.replace(/[^0-9+]/g, ''));
+    if (!isPhone && !emailRegex.test(email)) {
+      setError("Please enter a valid email address or phone number.");
       return;
     }
 
@@ -1587,9 +1588,9 @@ function EmailLoginScreen({ users, onUserLogin, onAdminLogin }) {
             {step === "email" ? (
               <div style={{ background: C.white, borderRadius: 16, padding: 24, boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 4 }}>{t("sendOtp")}</div>
-                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>{t("emailPlaceholder")}</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Enter your Email Address or Phone Number</div>
                 <div style={{ marginBottom: 14 }}>
-                  <Input label={t("emailLabel")} value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" required />
+                  <Input label="Email or Phone Number" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com or +919999999999" required />
                 </div>
                 {error && <div style={{ color: C.error, fontSize: 12, marginBottom: 10 }}>{error}</div>}
                 <Btn onClick={sendOTP} variant="primary" full disabled={loading} size="lg">
@@ -1916,9 +1917,7 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
     try {
       const faceapi = await import("@vladmandic/face-api");
 
-      const MODEL_URL = Capacitor.isNativePlatform()
-        ? "https://dhobi-samaj-metromany.vercel.app/models"
-        : "/models";
+      const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
 
       setScanStep(0);
       setScanMessage("📦 Loading face recognition neural network models...");
@@ -1929,6 +1928,8 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
         await (faceapi.nets as any).faceLandmark68TinyNet.loadFromUri(MODEL_URL);
       if (!(faceapi.nets as any).faceRecognitionNet.isLoaded)
         await (faceapi.nets as any).faceRecognitionNet.loadFromUri(MODEL_URL);
+      if (!(faceapi.nets as any).ageGenderNet.isLoaded)
+        await (faceapi.nets as any).ageGenderNet.loadFromUri(MODEL_URL);
 
       setScanStep(1);
       setScanMessage("👤 AI Scanner: Detecting face in your ID document...");
@@ -1953,24 +1954,30 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
 
       if (!idDetection) {
         setIsScanning(false);
-        f("governmentIdUrl", dataUrl);
-        showToast("⚠️ ID uploaded. Face not detected in ID photo. Manual verification pending by Admin.", "warning");
+        setScanError("❌ Could not detect a clear face in your ID document. Please upload a better scan.");
         return;
       }
 
       setScanStep(2);
-      setScanMessage("🔎 AI Scanner: Detecting face in your profile photo...");
+      setScanMessage("🔎 AI Scanner: Detecting face & age in your profile photo...");
 
       const profileImg = await loadImg(form.profilePhoto);
       const profileDetection = await (faceapi as any)
         .detectSingleFace(profileImg, detectorOpts)
         .withFaceLandmarks(true)
+        .withAgeAndGender()
         .withFaceDescriptor();
 
       if (!profileDetection) {
         setIsScanning(false);
-        f("governmentIdUrl", dataUrl);
-        showToast("⚠️ ID uploaded. Face not detected in profile photo. Manual verification pending by Admin.", "warning");
+        setScanError("❌ Could not detect a clear face in your profile photo. Please upload a better photo.");
+        return;
+      }
+      
+      const estimatedAge = Math.round(profileDetection.age);
+      if (estimatedAge < 18) {
+        setIsScanning(false);
+        setScanError(`🚫 AI Age Check Failed: You appear to be around ${estimatedAge} years old. Must be 18+ to register.`);
         return;
       }
 
@@ -1988,22 +1995,18 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
 
       if (distance > MATCH_THRESHOLD) {
         setIsScanning(false);
-        f("governmentIdUrl", dataUrl);
-        showToast(`⚠️ ID uploaded. Face match confidence low (${confidence}%). Manual verification pending by Admin.`, "warning");
+        setScanError(`❌ Face Match Failed! Confidence is too low (${confidence}%). The person in the ID does not match the profile photo.`);
         return;
       }
 
       setIsScanning(false);
       f("governmentIdUrl", dataUrl);
-      showToast(`✅ Identity Verified! Face match: ${confidence}% confidence — ${form.governmentIdType} accepted.`, "success");
+      showToast(`✅ Verified! Age: ${estimatedAge}, Face Match: ${confidence}%`, "success");
 
     } catch (scanErr) {
-      console.warn("Face-API unavailable, using secure fallback:", scanErr);
-      setScanMessage("⚡ Running secure offline verification...");
-      await new Promise(r => setTimeout(r, 1500));
+      console.warn("Face-API verification failed:", scanErr);
       setIsScanning(false);
-      f("governmentIdUrl", dataUrl);
-      showToast(`✅ ID verified — ${form.governmentIdType} accepted.`, "success");
+      setScanError("❌ Security Check Failed: Unable to run AI face and age verification. Please ensure you are connected to the internet.");
     }
 
   };
@@ -2108,9 +2111,13 @@ function RegistrationScreen({ email, initialData, onComplete, onBack }: any) {
   };
 
   const handleConfirm = async () => {
+    const age = calcAge(form.dob);
+    if (Number(age) < 18) {
+      showToast("Access Denied: You must be at least 18 years old to use this platform.", "error");
+      return;
+    }
     setShowConfirmModal(false);
     setSubmitting(true);
-    const age = calcAge(form.dob);
     const profilePhoto = form.photos[0] || form.profilePhoto;
     
     // If we have an existing ID (initialData), we perform an update
@@ -2659,7 +2666,7 @@ function PendingApprovalScreen({ user, onLogout, onDownloadBioData, onEditProfil
   );
 }
 
-function UserApp({ currentUser, setCurrentUser, triggerRefresh, allUsers, setAllUsers, onLogout, onSwitchAdmin, onDownloadBioData }) {
+function UserApp({ currentUser, setCurrentUser, triggerRefresh, allUsers, setAllUsers, onLogout, onSwitchAdmin, onDownloadBioData, onEditProfile }) {
   const { t } = useLang();
   const [tab, setTab] = useState("home");
   const [homeFeedMode, setHomeFeedMode] = useState("matches"); // matches | interests
@@ -3003,7 +3010,7 @@ function UserApp({ currentUser, setCurrentUser, triggerRefresh, allUsers, setAll
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Btn onClick={() => { setEditData({ ...currentUser }); setEditMode(true); }} variant="primary" full><Ic n="edit" s={16} c="#fff" /> ✏️ Edit My Profile</Btn>
+              <Btn onClick={onEditProfile} variant="primary" full><Ic n="edit" s={16} c="#fff" /> ✏️ Edit My Profile</Btn>
               <Btn onClick={() => onDownloadBioData(currentUser)} variant="gold" full><Ic n="crown" s={16} c="#fff" /> 📄 Download Bio Data PDF</Btn>
               {onSwitchAdmin && <Btn onClick={onSwitchAdmin} variant="outline" full><Ic n="shield" s={16} c={C.primary} /> {t('Admin Panel')}</Btn>}
               <Btn onClick={deleteMyProfile} variant="danger" full><Ic n="trash" s={16} c="#fff" /> Delete My Profile</Btn>
@@ -3427,7 +3434,7 @@ function ChatRoom({ me, other, onBack }) {
         <div ref={endRef} />
       </div>
       <div style={{ background: C.white, padding: "10px 14px", borderTop: `1px solid ${C.border}`, display: "flex", gap: 10, alignItems: "center" }}>
-        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={t("Type a message...")}
+        <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === "Enter" && send()} placeholder={"Type a message..."}
           style={{ flex: 1, border: `1.5px solid ${C.border}`, borderRadius: 24, padding: "10px 16px", fontSize: 13, outline: "none", fontFamily: "'Segoe UI', sans-serif" }} />
         <button onClick={send} style={{ width: 40, height: 40, borderRadius: "50%", background: C.primary, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Ic n="send" s={16} c="#fff" />
@@ -5234,14 +5241,12 @@ export default function App() {
         }, 1000);
       } else {
         console.error("Registration failed:", data.error);
-        // Still navigate to pending
-        setCurrentUser(finalUserData);
-        setScreen("pending");
+        alert("Failed to save profile: " + (data.error || "Unknown error"));
+        // Stop the user from continuing so they know their data is unsaved
       }
     } catch (err) {
       console.error("Registration failed:", err);
-      setCurrentUser(finalUserData);
-      setScreen("pending");
+      alert("Failed to save profile due to a network or server error.");
     }
   };
 
@@ -5279,6 +5284,7 @@ export default function App() {
       onLogout={handleLogout}
       onSwitchAdmin={null}
       onDownloadBioData={setBioDataUser}
+      onEditProfile={() => setScreen("register")}
     />
   );
 

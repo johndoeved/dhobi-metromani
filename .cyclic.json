@@ -1,0 +1,11 @@
+{
+  "name": "dhobi-metromani",
+  "version": {
+    "major": 1,
+    "minor": 0,
+    "patch": 0
+  },
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "startCommand": "npm start"
+}

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.dhobisamaj.metromany',
+  appId: 'com.dhobi.metromani',
   appName: 'Dhobi Matrimony',
   webDir: 'dist',
   server: {

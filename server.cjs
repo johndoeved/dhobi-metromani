@@ -218,14 +218,10 @@ var MongoUserDb = class {
     return await User.findOne({ uid }).lean();
   }
   async create(user) {
-    const userData = { ...user };
-    delete userData._id;
-    await User.findOneAndUpdate({ uid: user.uid }, userData, { upsert: true, new: true });
+    await User.findOneAndUpdate({ uid: user.uid }, user, { upsert: true, new: true });
   }
   async update(uid, updates) {
-    const updateData = { ...updates };
-    delete updateData._id;
-    const res = await User.updateOne({ uid }, { $set: updateData });
+    const res = await User.updateOne({ uid }, { $set: updates });
     return res.modifiedCount > 0;
   }
   async delete(uid) {
@@ -480,44 +476,25 @@ var LocalUserDb = class {
     this.save();
   }
 };
-var ADMIN_FALLBACK_EMAIL = "admin@dhobimatrimony.com";
-var ADMIN_FALLBACK_PASSWORD = "DhobiMatrimony@Admin#2026!";
-var adminSessionStore = /* @__PURE__ */ new Map();
-var mongoConnected = false;
 var userDb;
-var dbInitialized = false;
-async function initDb() {
-  if (dbInitialized) return;
-  if (process.env.MONGODB_URI) {
+if (process.env.MONGODB_URI) {
+  import_mongoose.default.connect(process.env.MONGODB_URI).then(async () => {
+    console.log("[MongoDB] Connected successfully");
     try {
-      console.log("[MongoDB] Connecting to database...");
-      import_mongoose.default.set("bufferCommands", false);
-      await import_mongoose.default.connect(process.env.MONGODB_URI, {
-        serverSelectionTimeoutMS: 4e3
-      });
-      mongoConnected = true;
-      console.log("[MongoDB] Connected successfully");
-      try {
-        await AdminSettings.findOneAndUpdate(
-          { key: "admin_credentials" },
-          { value: { email: ADMIN_FALLBACK_EMAIL, password: ADMIN_FALLBACK_PASSWORD } },
-          { upsert: true }
-        );
-        console.log("[MongoDB] Admin settings synchronized.");
-      } catch (e) {
-        console.error("[MongoDB] Failed to sync admin credentials:", e);
-      }
-      userDb = new MongoUserDb();
-    } catch (err) {
-      mongoConnected = false;
-      console.error("[MongoDB] Error connecting (falling back to Local JSON database):", err.message);
-      userDb = new LocalUserDb();
+      await AdminSettings.findOneAndUpdate(
+        { key: "admin_credentials" },
+        { value: { email: "admin@dhobimatrimony.com", password: "DhobiMatrimony@Admin#2026!" } },
+        { upsert: true }
+      );
+      console.log("[MongoDB] Admin settings synchronized.");
+    } catch (e) {
+      console.error("[MongoDB] Failed to sync admin credentials:", e);
     }
-  } else {
-    console.log("[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.");
-    userDb = new LocalUserDb();
-  }
-  dbInitialized = true;
+  }).catch((err) => console.error("[MongoDB] Error:", err));
+  userDb = new MongoUserDb();
+} else {
+  console.log("[UserDb] MONGODB_URI not provided. Falling back to Local JSON database.");
+  userDb = new LocalUserDb();
 }
 var otpDb = /* @__PURE__ */ new Map();
 var otpRequests = /* @__PURE__ */ new Map();
@@ -556,53 +533,84 @@ var NodemailerEmailProvider = class {
   reinitTransporter() {
     this.init();
   }
-  async sendEmail(to, subject, text) {
-    const from = process.env.SMTP_FROM || "Dhobi Matrimony <dhobimetromany@gmail.com>";
-    if (this.transporter && process.env.SMTP_USER !== "test@gmail.com") {
-      try {
-        await this.transporter.sendMail({
-          from,
-          to,
-          subject,
-          text,
-          headers: {
-            "Precedence": "transactional",
-            "X-Auto-Response-Suppress": "All"
-          }
-        });
-        console.log(`[EmailService] Email sent successfully to ${to}`);
-        return true;
-      } catch (err) {
-        console.warn(`[EmailService] sendMail failed: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
-    console.log(`[EmailService:CONSOLE] To: ${to} | Subject: ${subject} | Body: ${text}`);
-    return true;
-  }
   async sendOtp(email, otp) {
     const from = process.env.SMTP_FROM || "Dhobi Matrimony <dhobimetromany@gmail.com>";
-    const subject = "Sign In Verification Code - Dhobi Matrimony";
+    const subject = "Your Dhobi Matrimony Verification Code";
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Verification Code - Dhobi Matrimony</title>
+        <title>Your Dhobi Matrimony Verification Code</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
+            color: #333333;
+          }
+          .container {
+            max-width: 550px;
+            background-color: #ffffff;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
+          }
+          .header {
+            text-align: center;
+            border-bottom: 2px solid #990000;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+          }
+          .title {
+            color: #990000;
+            font-family: Georgia, serif;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+          }
+          .otp-box {
+            background-color: #f7f7f7;
+            border: 1px solid #D4AF37;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+            font-size: 30px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #990000;
+            margin: 25px 0;
+          }
+          .footer {
+            font-size: 11px;
+            color: #888888;
+            margin-top: 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 15px;
+            line-height: 1.5;
+          }
+        </style>
       </head>
-      <body style="font-family: Arial, sans-serif; background-color: #ffffff; color: #333333; margin: 0; padding: 20px;">
-        <div style="max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <h2 style="color: #333333; margin-top: 0;">Dhobi Matrimony</h2>
-          <p>Dear Member,</p>
-          <p>Your verification code is:</p>
-          <div style="background-color: #f7f7f7; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; margin: 20px 0; border-radius: 4px;">
-            ${otp}
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 class="title">Dhobi Matrimony</h1>
           </div>
-          <p>This code will expire in 5 minutes. Do not share this code with anyone.</p>
-          <p style="font-size: 12px; color: #888888; margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-            This is an automated transactional security email. Please do not reply.<br>
-            Dhobi Matrimony Security Team
-          </p>
+          <p>Dear Member,</p>
+          <p>Your one-time email verification code is:</p>
+          <div class="otp-box">${otp}</div>
+          <p>This code will expire in 5 minutes. For security reasons, please do not share this verification code with anyone.</p>
+          <p>If you did not request this verification code, you can safely ignore this email.</p>
+          <div class="footer">
+            Best regards,<br>
+            <strong>Dhobi Matrimony Security Team</strong><br>
+            <span style="font-size: 10px; color: #aaaaaa;">This is an automated transactional security email. Please do not reply.</span>
+          </div>
         </div>
       </body>
       </html>
@@ -622,14 +630,8 @@ This code will expire in 5 minutes.
 If you did not request this code, please ignore this email.
 
 Regards,
-Dhobi Matrimony Security Team`,
-          html,
-          headers: {
-            "Message-ID": `<${Date.now()}.${Math.random().toString(36).substring(2)}@${from.split("@")[1] ? from.split("@")[1].replace(">", "") : "dhobimatrimony.com"}>`,
-            "Precedence": "transactional",
-            "X-Auto-Response-Suppress": "All",
-            "X-Priority": "3"
-          }
+Dhobi Matrimony`,
+          html
         });
         console.log(`[EmailService] OTP email sent successfully to ${email}`);
         return true;
@@ -656,50 +658,6 @@ Dhobi Matrimony Security Team`,
   }
 };
 var emailProvider = new NodemailerEmailProvider();
-async function sendTwilioMessage(to, bodyText, isWhatsApp = false) {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-  const twilioWhatsApp = process.env.TWILIO_WHATSAPP_NUMBER || twilioPhone;
-  if (!accountSid || !authToken || !twilioPhone) {
-    console.warn("[TwilioService] Missing Twilio credentials. Skipping real SMS/WhatsApp send.");
-    return false;
-  }
-  let cleanTo = to.trim().replace(/[\s-()]/g, "");
-  if (!cleanTo.startsWith("+")) {
-    cleanTo = `+91${cleanTo}`;
-  }
-  const from = isWhatsApp ? `whatsapp:${twilioWhatsApp}` : twilioPhone;
-  const targetTo = isWhatsApp ? `whatsapp:${cleanTo}` : cleanTo;
-  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
-  const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
-  const body = new URLSearchParams({
-    From: from,
-    To: targetTo,
-    Body: bodyText
-  });
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: body.toString()
-    });
-    const data = await response.json();
-    if (response.ok) {
-      console.log(`[TwilioService] Sent ${isWhatsApp ? "WhatsApp" : "SMS"} successfully: ${data.sid}`);
-      return true;
-    } else {
-      console.warn(`[TwilioService] Twilio API Error: ${data.message || response.statusText}`);
-      return false;
-    }
-  } catch (err) {
-    console.error("[TwilioService] HTTP request failed:", err);
-    return false;
-  }
-}
 var ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.SMTP_USER || "";
 var sendGenericEmail = async (to, subject, html, text) => {
   const transporter = emailProvider.transporter;
@@ -874,26 +832,7 @@ var authenticateToken = (req, res, next) => {
     if (err) {
       return res.status(403).json({ success: false, message: "Invalid or expired token." });
     }
-    const inMemorySession = adminSessionStore.get(token);
-    if (inMemorySession && inMemorySession.status === "active") {
-      if (new Date(inMemorySession.expiresAt) < /* @__PURE__ */ new Date()) {
-        adminSessionStore.delete(token);
-        return res.status(403).json({ success: false, message: "Session has expired." });
-      }
-      inMemorySession.lastUsedAt = (/* @__PURE__ */ new Date()).toISOString();
-      req.user = { uid: decoded.uid, email: decoded.email, role: decoded.role || "user" };
-      req.sessionToken = token;
-      return next();
-    }
-    let sessions = [];
-    try {
-      sessions = await Promise.race([
-        await userDb.getSessions(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4e3))
-      ]);
-    } catch (e) {
-      return res.status(403).json({ success: false, message: "Session verification timed out. Please login again." });
-    }
+    const sessions = await userDb.getSessions();
     const activeSession = sessions.find((s) => s.token === token && s.status === "active");
     if (!activeSession) {
       return res.status(403).json({ success: false, message: "Session has been revoked or expired." });
@@ -902,7 +841,7 @@ var authenticateToken = (req, res, next) => {
       await userDb.revokeSession(token);
       return res.status(403).json({ success: false, message: "Session has expired." });
     }
-    await userDb.updateSessionLastUsed(token);
+    userDb.updateSessionLastUsed(token);
     req.user = {
       uid: decoded.uid,
       email: decoded.email,
@@ -934,7 +873,6 @@ var apiRateLimiter = (windowMs, maxRequests, message) => {
   };
 };
 async function startServer() {
-  await initDb();
   const app = (0, import_express.default)();
   app.use(import_express.default.json({ limit: "10mb" }));
   app.use((req, res, next) => {
@@ -953,22 +891,22 @@ async function startServer() {
       timestamp: (/* @__PURE__ */ new Date()).toISOString()
     });
   });
-  app.get("/api/users/me", authenticateToken, async (req, res) => {
+  app.get("/api/users/me", authenticateToken, (req, res) => {
     const uid = req.user.uid;
-    const user = await userDb.findById(uid);
+    const user = userDb.findById(uid);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
     res.json({ success: true, user });
   });
-  app.get("/api/users", authenticateToken, async (req, res) => {
+  app.get("/api/users", authenticateToken, (req, res) => {
     const callerId = req.user.uid;
     const callerRole = req.user.role;
-    const allUsers = await userDb.getAll();
+    const allUsers = userDb.getAll();
     if (callerRole === "admin") {
       return res.json({ success: true, users: allUsers });
     }
-    const callerUser = await userDb.findById(callerId);
+    const callerUser = userDb.findById(callerId);
     const callerBlocked = callerUser?.blockedUsers || [];
     const visibleUsers = allUsers.filter((u) => {
       if (u.uid === callerId) return true;
@@ -977,12 +915,11 @@ async function startServer() {
       if (u.blockedUsers?.includes(callerId)) return false;
       return true;
     });
-    const interests = await userDb.getInterests();
     const sanitizedUsers = visibleUsers.map((u) => {
       if (u.uid === callerId) {
         return u;
       }
-      const activeConsent = interests.some(
+      const activeConsent = userDb.getInterests().some(
         (i) => i.status === "accepted" && (i.senderId === callerId && i.receiverId === u.uid || i.senderId === u.uid && i.receiverId === callerId)
       );
       if (activeConsent) {
@@ -998,7 +935,7 @@ async function startServer() {
       users: sanitizedUsers
     });
   });
-  app.post("/api/users/register", authenticateToken, async (req, res) => {
+  app.post("/api/users/register", authenticateToken, (req, res) => {
     const rawUserData = req.body;
     if (!rawUserData.email || !rawUserData.uid) {
       return res.status(400).json({ error: "Missing email or uid" });
@@ -1015,9 +952,9 @@ async function startServer() {
       return res.status(403).json({ error: "You must be at least 18 years old to use this service." });
     }
     const sanitizedUserData = sanitizeUserData(rawUserData);
-    await userDb.create(sanitizedUserData);
-    await userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), userId: rawUserData.uid, userEmail: rawUserData.email, action: "PROFILE_REGISTERED", details: `New profile created for ${rawUserData.name || rawUserData.email}`, ip: req.headers["x-forwarded-for"] || req.ip || "unknown" });
-    await userDb.addNotification({ id: `n_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), type: "new_registration", userId: rawUserData.uid, userName: rawUserData.name || rawUserData.email, userEmail: rawUserData.email, summary: `New registration: ${rawUserData.name || rawUserData.email}`, details: `Gender: ${rawUserData.gender || "N/A"} | Age: ${rawUserData.age || "N/A"} | Location: ${rawUserData.location || "N/A"}`, read: false });
+    userDb.create(sanitizedUserData);
+    userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), userId: rawUserData.uid, userEmail: rawUserData.email, action: "PROFILE_REGISTERED", details: `New profile created for ${rawUserData.name || rawUserData.email}`, ip: req.headers["x-forwarded-for"] || req.ip || "unknown" });
+    userDb.addNotification({ id: `n_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), type: "new_registration", userId: rawUserData.uid, userName: rawUserData.name || rawUserData.email, userEmail: rawUserData.email, summary: `New registration: ${rawUserData.name || rawUserData.email}`, details: `Gender: ${rawUserData.gender || "N/A"} | Age: ${rawUserData.age || "N/A"} | Location: ${rawUserData.location || "N/A"}`, read: false });
     sendAdminEmail(
       `\u{1F195} New Profile Registration \u2014 ${rawUserData.name || rawUserData.email}`,
       adminEmailHtml("New User Registered", `<p>A new profile has been submitted and is awaiting your approval.</p><table><tr><th>Field</th><th>Value</th></tr><tr><td>Name</td><td>${rawUserData.name || "N/A"}</td></tr><tr><td>Email</td><td>${rawUserData.email}</td></tr><tr><td>Gender</td><td>${rawUserData.gender || "N/A"}</td></tr><tr><td>Age</td><td>${rawUserData.age || "N/A"}</td></tr><tr><td>Location</td><td>${rawUserData.location || "N/A"}</td></tr><tr><td>Submitted At</td><td>${(/* @__PURE__ */ new Date()).toLocaleString("en-IN")}</td></tr></table><p>Please log in to the admin panel to review and approve this profile.</p>`),
@@ -1031,74 +968,69 @@ async function startServer() {
     );
     res.json({ success: true, user: sanitizedUserData });
   });
-  app.post("/api/users/update", authenticateToken, async (req, res) => {
-    try {
-      const { uid, updates, changedFields } = req.body;
-      if (!uid || !updates) {
-        return res.status(400).json({ error: "Missing uid or updates" });
-      }
-      if (req.user.role !== "admin" && req.user.uid !== uid) {
-        return res.status(403).json({ error: "Access denied. You can only update your own profile." });
-      }
-      if (updates.profilePhoto && !validateBase64Payload(updates.profilePhoto)) {
-        return res.status(400).json({ error: "Invalid profile photo file type. Supports images under 5MB only." });
-      }
-      if (updates.governmentIdUrl && !validateBase64Payload(updates.governmentIdUrl)) {
-        return res.status(400).json({ error: "Invalid document upload. Supports images/PDFs under 5MB only." });
-      }
-      if (isUnder18(updates.age, updates.dob)) {
-        return res.status(403).json({ error: "You must be at least 18 years old to use this service." });
-      }
-      const sanitizedUpdates = sanitizeUserData(updates);
-      const targetUser = await userDb.findById(uid);
-      const updated = await userDb.update(uid, sanitizedUpdates);
-      if (updates.status === "blocked") {
-        await userDb.revokeAllSessions(uid);
-      }
-      if (updated && targetUser) {
-        const actionBy = req.user.role === "admin" ? "admin" : "user";
-        const isUserSelfEdit = actionBy === "user";
-        const fieldsDesc = changedFields ? changedFields.map((f) => `${f.field}: "${f.oldValue}" \u2192 "${f.newValue}"`).join(", ") : Object.keys(updates).filter((k) => k !== "updatedAt").join(", ");
-        await userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), userId: uid, userEmail: targetUser.email, action: isUserSelfEdit ? "PROFILE_UPDATED_BY_USER" : "PROFILE_UPDATED_BY_ADMIN", details: fieldsDesc, ip: req.headers["x-forwarded-for"] || req.ip || "unknown" });
-        if (isUserSelfEdit && changedFields && changedFields.length > 0) {
-          const changedSummary = changedFields.map((f) => `${f.field} changed from "${f.oldValue}" to "${f.newValue}"`).join("\n");
-          await userDb.addNotification({ id: `n_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), type: "profile_update", userId: uid, userName: targetUser.name || targetUser.email, userEmail: targetUser.email, summary: `Profile updated by ${targetUser.name || targetUser.email}`, details: changedSummary, read: false, changedFields });
-          const tableRows = changedFields.map((f) => `<tr><td><strong>${f.field}</strong></td><td style="color:#cc0000;">${f.oldValue || "(empty)"}</td><td style="color:#006600;">${f.newValue || "(empty)"}</td></tr>`).join("");
-          sendAdminEmail(
-            `\u270F\uFE0F Profile Updated \u2014 ${targetUser.name || targetUser.email}`,
-            adminEmailHtml("User Profile Update Alert", `<p>A user has updated their profile. Details below:</p><table><tr><th>Field</th><th>Previous Value</th><th>New Value</th></tr>${tableRows}</table><table><tr><th>User</th><th>ID</th><th>Email</th><th>Date & Time</th></tr><tr><td>${targetUser.name || "N/A"}</td><td>${uid}</td><td>${targetUser.email}</td><td>${(/* @__PURE__ */ new Date()).toLocaleString("en-IN")}</td></tr></table>`),
-            `Profile updated by ${targetUser.name || targetUser.email} (${uid}) at ${(/* @__PURE__ */ new Date()).toLocaleString("en-IN")}. Changes: ${fieldsDesc}`
-          );
-          sendUserEmail(
-            targetUser.email,
-            "\u270F\uFE0F Your Profile Has Been Updated \u2014 Dhobi Matrimony",
-            userEmailHtml("Profile Updated", `<p>Dear ${targetUser.name || "User"},</p><p>Your profile has been updated successfully. The changes will be reviewed by our admin team.</p><p style="font-size:12px;color:#666;">If you did not make these changes, please contact us immediately.</p>`),
-            `Your profile has been updated. Changes: ${fieldsDesc}`
-          );
-        }
-        if (req.user.role === "admin" && updates.status === "approved") {
-          sendUserEmail(
-            targetUser.email,
-            "\u{1F389} Your Profile Has Been Approved! \u2014 Dhobi Matrimony",
-            userEmailHtml("Profile Approved!", `<p>Dear ${targetUser.name || "User"},</p><p>Congratulations! \u{1F389} Your profile on <strong>Dhobi Matrimony</strong> has been <strong style="color:#006600;">approved and verified</strong>.</p><p>You can now log in and browse potential matches from the Dhobi community.</p>`),
-            `Your profile has been approved! You can now log in and find matches.`
-          );
-        } else if (req.user.role === "admin" && updates.status === "blocked") {
-          sendUserEmail(
-            targetUser.email,
-            "Your Profile Status Has Changed \u2014 Dhobi Matrimony",
-            userEmailHtml("Profile Status Update", `<p>Dear ${targetUser.name || "User"},</p><p>Your profile status has been updated by our admin team. Please contact support for more information.</p>`),
-            `Your profile status has been updated. Please contact support.`
-          );
-        }
-      }
-      res.json({ success: !!updated });
-    } catch (error) {
-      console.error("[AuthService] Error updating user profile:", error);
-      res.status(500).json({ error: "Internal server error while updating profile." });
+  app.post("/api/users/update", authenticateToken, (req, res) => {
+    const { uid, updates, changedFields } = req.body;
+    if (!uid || !updates) {
+      return res.status(400).json({ error: "Missing uid or updates" });
     }
+    if (req.user.role !== "admin" && req.user.uid !== uid) {
+      return res.status(403).json({ error: "Access denied. You can only update your own profile." });
+    }
+    if (updates.profilePhoto && !validateBase64Payload(updates.profilePhoto)) {
+      return res.status(400).json({ error: "Invalid profile photo file type. Supports images under 5MB only." });
+    }
+    if (updates.governmentIdUrl && !validateBase64Payload(updates.governmentIdUrl)) {
+      return res.status(400).json({ error: "Invalid document upload. Supports images/PDFs under 5MB only." });
+    }
+    if (isUnder18(updates.age, updates.dob)) {
+      return res.status(403).json({ error: "You must be at least 18 years old to use this service." });
+    }
+    const sanitizedUpdates = sanitizeUserData(updates);
+    const targetUser = userDb.findById(uid);
+    const updated = userDb.update(uid, sanitizedUpdates);
+    if (updates.status === "blocked") {
+      userDb.revokeAllSessions(uid);
+    }
+    if (updated && targetUser) {
+      const actionBy = req.user.role === "admin" ? "admin" : "user";
+      const isUserSelfEdit = actionBy === "user";
+      const fieldsDesc = changedFields ? changedFields.map((f) => `${f.field}: "${f.oldValue}" \u2192 "${f.newValue}"`).join(", ") : Object.keys(updates).filter((k) => k !== "updatedAt").join(", ");
+      userDb.addAuditLog({ id: `al_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), userId: uid, userEmail: targetUser.email, action: isUserSelfEdit ? "PROFILE_UPDATED_BY_USER" : "PROFILE_UPDATED_BY_ADMIN", details: fieldsDesc, ip: req.headers["x-forwarded-for"] || req.ip || "unknown" });
+      if (isUserSelfEdit && changedFields && changedFields.length > 0) {
+        const changedSummary = changedFields.map((f) => `${f.field} changed from "${f.oldValue}" to "${f.newValue}"`).join("\n");
+        userDb.addNotification({ id: `n_${Date.now()}`, timestamp: (/* @__PURE__ */ new Date()).toISOString(), type: "profile_update", userId: uid, userName: targetUser.name || targetUser.email, userEmail: targetUser.email, summary: `Profile updated by ${targetUser.name || targetUser.email}`, details: changedSummary, read: false, changedFields });
+        const tableRows = changedFields.map((f) => `<tr><td><strong>${f.field}</strong></td><td style="color:#cc0000;">${f.oldValue || "(empty)"}</td><td style="color:#006600;">${f.newValue || "(empty)"}</td></tr>`).join("");
+        sendAdminEmail(
+          `\u270F\uFE0F Profile Updated \u2014 ${targetUser.name || targetUser.email}`,
+          adminEmailHtml("User Profile Update Alert", `<p>A user has updated their profile. Details below:</p><table><tr><th>Field</th><th>Previous Value</th><th>New Value</th></tr>${tableRows}</table><table><tr><th>User</th><th>ID</th><th>Email</th><th>Date & Time</th></tr><tr><td>${targetUser.name || "N/A"}</td><td>${uid}</td><td>${targetUser.email}</td><td>${(/* @__PURE__ */ new Date()).toLocaleString("en-IN")}</td></tr></table>`),
+          `Profile updated by ${targetUser.name || targetUser.email} (${uid}) at ${(/* @__PURE__ */ new Date()).toLocaleString("en-IN")}. Changes: ${fieldsDesc}`
+        );
+        sendUserEmail(
+          targetUser.email,
+          "\u270F\uFE0F Your Profile Has Been Updated \u2014 Dhobi Matrimony",
+          userEmailHtml("Profile Updated", `<p>Dear ${targetUser.name || "User"},</p><p>Your profile has been updated successfully. The changes will be reviewed by our admin team.</p><p style="font-size:12px;color:#666;">If you did not make these changes, please contact us immediately.</p>`),
+          `Your profile has been updated. Changes: ${fieldsDesc}`
+        );
+      }
+      if (req.user.role === "admin" && updates.status === "approved") {
+        sendUserEmail(
+          targetUser.email,
+          "\u{1F389} Your Profile Has Been Approved! \u2014 Dhobi Matrimony",
+          userEmailHtml("Profile Approved!", `<p>Dear ${targetUser.name || "User"},</p><p>Congratulations! \u{1F389} Your profile on <strong>Dhobi Matrimony</strong> has been <strong style="color:#006600;">approved and verified</strong>.</p><p>You can now log in and browse potential matches from the Dhobi community.</p>`),
+          `Your profile has been approved! You can now log in and find matches.`
+        );
+      } else if (req.user.role === "admin" && updates.status === "blocked") {
+        sendUserEmail(
+          targetUser.email,
+          "Your Profile Status Has Changed \u2014 Dhobi Matrimony",
+          userEmailHtml("Profile Status Update", `<p>Dear ${targetUser.name || "User"},</p><p>Your profile status has been updated by our admin team. Please contact support for more information.</p>`),
+          `Your profile status has been updated. Please contact support.`
+        );
+      }
+    }
+    res.json({ success: updated });
   });
-  app.post("/api/users/delete", authenticateToken, async (req, res) => {
+  app.post("/api/users/delete", authenticateToken, (req, res) => {
     const { uid } = req.body;
     if (!uid) {
       return res.status(400).json({ error: "Missing uid" });
@@ -1106,7 +1038,7 @@ async function startServer() {
     if (req.user.role !== "admin" && req.user.uid !== uid) {
       return res.status(403).json({ error: "Access denied. You can only delete your own profile." });
     }
-    const deleted = await userDb.delete(uid);
+    const deleted = userDb.delete(uid);
     res.json({ success: deleted });
   });
   app.post("/api/admin/save-smtp", authenticateToken, requireAdmin, (req, res) => {
@@ -1180,43 +1112,25 @@ JWT_SECRET="d5b2c9e7a8f103b4c6e9a8d2f1c3e5a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3"
     if (!email || !password) {
       return res.status(400).json({ success: false, message: "Email and password are required." });
     }
-    const emailLower = email.trim().toLowerCase();
-    const isFallbackAdmin = emailLower === ADMIN_FALLBACK_EMAIL.toLowerCase() && password === ADMIN_FALLBACK_PASSWORD;
-    let isDbAdmin = false;
-    if (!isFallbackAdmin && mongoConnected) {
-      try {
-        const adminCreds = await Promise.race([
-          await userDb.getAdminCredentials(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 3e3))
-        ]);
-        isDbAdmin = emailLower === adminCreds.email.toLowerCase() && password === adminCreds.password;
-      } catch (e) {
-        console.warn("[AdminLogin] DB credential check timed out, using fallback only.");
-      }
-    }
-    if (isFallbackAdmin || isDbAdmin) {
+    const adminCreds = await userDb.getAdminCredentials();
+    if (email.trim().toLowerCase() === adminCreds.email.toLowerCase() && password === adminCreds.password) {
       const token = import_jsonwebtoken.default.sign(
-        { uid: "admin", email: ADMIN_FALLBACK_EMAIL, role: "admin" },
+        { uid: "admin", email: "admin@dhobimetromani.com", role: "admin" },
         JWT_SECRET,
         { expiresIn: "7d" }
       );
       const now = /* @__PURE__ */ new Date();
-      const sessionData = {
+      userDb.createSession({
         id: `sess_admin_${Date.now()}`,
         uid: "admin",
         token,
         deviceInfo: req.headers["user-agent"] || "Unknown Admin Device",
-        ip: req.headers["x-forwarded-for"] || req.ip || "127.0.0.1",
+        ip: req.ip || req.headers["x-forwarded-for"] || "127.0.0.1",
         status: "active",
         createdAt: now.toISOString(),
         expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1e3).toISOString(),
         lastUsedAt: now.toISOString()
-      };
-      adminSessionStore.set(token, sessionData);
-      if (mongoConnected) {
-        await userDb.createSession(sessionData).catch((e) => console.warn("[AdminLogin] Could not persist session to DB:", e.message));
-      }
-      console.log(`[AdminLogin] Admin logged in successfully via ${isFallbackAdmin ? "fallback" : "DB"} credentials.`);
+      });
       return res.json({
         success: true,
         token,
@@ -1228,19 +1142,20 @@ JWT_SECRET="d5b2c9e7a8f103b4c6e9a8d2f1c3e5a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3"
   app.post("/api/auth/admin-forgot-password-otp", apiRateLimiter(5 * 60 * 1e3, 3, "Too many OTP requests. Please wait a few minutes."), async (req, res) => {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required." });
-    if (email.trim().toLowerCase() !== ADMIN_FALLBACK_EMAIL.toLowerCase()) {
+    const adminCreds = await userDb.getAdminCredentials();
+    if (email.trim().toLowerCase() !== adminCreds.email.toLowerCase()) {
       return res.status(400).json({ error: "Invalid admin email." });
     }
     const otp = Math.floor(1e5 + Math.random() * 9e5).toString();
     otpDb.set(email.toLowerCase(), { otp, expiresAt: new Date(Date.now() + 5 * 60 * 1e3) });
-    const emailSent2 = await emailProvider.sendEmail(
+    const emailSent = await emailProvider.sendEmail(
       email,
       "Dhobi Metromany - Admin Password Reset OTP",
       `Your OTP for resetting the Admin Password is: ${otp}
 
 This OTP is valid for 5 minutes. If you did not request this, please ignore this email.`
     );
-    if (emailSent2) {
+    if (emailSent) {
       res.json({ success: true, message: "OTP sent to your admin email." });
     } else {
       res.status(500).json({ error: "Failed to send OTP. Check SMTP settings." });
@@ -1259,44 +1174,33 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     otpDb.delete(email.toLowerCase());
     res.json({ success: true, message: "Admin credentials updated successfully." });
   });
-  app.get("/api/auth/me", authenticateToken, async (req, res) => {
-    if (req.user.uid === "admin") {
-      return res.json({ success: true, user: { uid: "admin", name: "Admin", isAdmin: true, status: "approved" } });
-    }
-    try {
-      const user = await Promise.race([
-        await userDb.findById(req.user.uid),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 5e3))
-      ]);
-      if (!user) {
-        return res.status(404).json({ success: false, message: "Candidate profile not found." });
+  app.get("/api/auth/me", authenticateToken, (req, res) => {
+    const user = userDb.findById(req.user.uid);
+    if (!user) {
+      if (req.user.uid === "admin") {
+        return res.json({ success: true, user: { uid: "admin", name: "Admin", isAdmin: true, status: "approved" } });
       }
-      res.json({ success: true, user });
-    } catch (e) {
-      return res.status(503).json({ success: false, message: "Database unavailable. Please try again." });
+      return res.status(404).json({ success: false, message: "Candidate profile not found." });
     }
+    res.json({ success: true, user });
   });
-  app.post("/api/auth/logout", authenticateToken, async (req, res) => {
-    await userDb.revokeSession(req.sessionToken);
+  app.post("/api/auth/logout", authenticateToken, (req, res) => {
+    userDb.revokeSession(req.sessionToken);
     res.json({ success: true, message: "Logged out successfully." });
   });
-  app.post("/api/auth/logout-all", authenticateToken, async (req, res) => {
-    await userDb.revokeAllSessions(req.user.uid);
+  app.post("/api/auth/logout-all", authenticateToken, (req, res) => {
+    userDb.revokeAllSessions(req.user.uid);
     res.json({ success: true, message: "Revoked all active sessions successfully." });
   });
   app.post("/api/auth/send-otp", apiRateLimiter(5 * 60 * 1e3, 5, "Too many OTP requests. Please wait a few minutes."), async (req, res) => {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json({ success: false, message: "Email address or Phone number is required." });
+      return res.status(400).json({ success: false, message: "Email address is required." });
     }
-    let cleanEmail = email.toLowerCase().trim();
-    const isPhone = /^[0-9+\-\s()]{10,15}$/.test(cleanEmail.replace(/[^0-9+]/g, ""));
+    const cleanEmail = email.toLowerCase().trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!isPhone && !emailRegex.test(cleanEmail)) {
-      return res.status(400).json({ success: false, message: "Invalid email address or phone number format." });
-    }
-    if (isPhone) {
-      cleanEmail = cleanEmail.replace(/[^0-9+]/g, "");
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: "Invalid email address format." });
     }
     const now = Date.now();
     const tenMinutesAgo = now - 10 * 60 * 1e3;
@@ -1332,25 +1236,8 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       });
       recentRequests.push(now);
       otpRequests.set(cleanEmail, recentRequests);
-      let messageSent = false;
-      if (isPhone) {
-        const phoneWithCode = cleanEmail.startsWith("+") ? cleanEmail : cleanEmail.length === 10 ? "+91" + cleanEmail : "+" + cleanEmail;
-        messageSent = await sendTwilioMessage(phoneWithCode, `Your Dhobi Matrimony verification code is: ${otp}. Valid for 5 minutes.`);
-        if (!messageSent) {
-          console.warn("[AuthService] Twilio failed or not configured, relying on console logs.");
-        }
-      } else {
-        messageSent = await emailProvider.sendOtp(cleanEmail, otp);
-      }
-      const isEmailConfigured = !!process.env.SMTP_USER && process.env.SMTP_USER !== "test@gmail.com";
-      const isTwilioConfigured = !!process.env.TWILIO_ACCOUNT_SID;
-      const isDebug = !isEmailConfigured && !isPhone || !isTwilioConfigured && isPhone || !messageSent;
-      try {
-        const browserDir = process.env.BROWSER_DIR || import_path.default.join(process.cwd(), "browser");
-        if (!import_fs.default.existsSync(browserDir)) import_fs.default.mkdirSync(browserDir, { recursive: true });
-        import_fs.default.writeFileSync(import_path.default.join(browserDir, "otp.txt"), otp, "utf8");
-      } catch (e) {
-      }
+      const emailSent = await emailProvider.sendOtp(cleanEmail, otp);
+      const isDebug = !process.env.SMTP_USER || process.env.SMTP_USER === "test@gmail.com" || process.env.SMTP_USER.includes("your-email") || !emailSent;
       return res.status(200).json({
         success: true,
         message: emailSent ? "OTP sent successfully" : "OTP generated (Email delivery failed, returned in response for testing)",
@@ -1369,11 +1256,7 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     if (!email || !otp) {
       return res.status(400).json({ success: false, message: "Email and OTP code are required." });
     }
-    let cleanEmail = email.toLowerCase().trim();
-    const isPhone = /^[0-9+\-\s()]{10,15}$/.test(cleanEmail.replace(/[^0-9+]/g, ""));
-    if (isPhone) {
-      cleanEmail = cleanEmail.replace(/[^0-9+]/g, "");
-    }
+    const cleanEmail = email.toLowerCase().trim();
     const record = otpDb.get(cleanEmail);
     if (!record) {
       return res.status(400).json({ success: false, message: "No active OTP verification request found." });
@@ -1399,7 +1282,7 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
         });
       }
       otpDb.delete(cleanEmail);
-      let user = await userDb.findByEmail(cleanEmail);
+      let user = userDb.findByEmail(cleanEmail);
       let isNew = false;
       if (!user) {
         isNew = true;
@@ -1411,7 +1294,7 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
           membership: "free",
           createdAt: (/* @__PURE__ */ new Date()).toISOString()
         };
-        await userDb.create(user);
+        userDb.create(user);
       }
       if (user.status === "blocked") {
         return res.status(403).json({ success: false, message: "This account has been disabled/blocked by an administrator." });
@@ -1427,7 +1310,7 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       );
       const now = /* @__PURE__ */ new Date();
       const sessionDurationMs = rememberMe ? 30 * 24 * 60 * 60 * 1e3 : 24 * 60 * 60 * 1e3;
-      await userDb.createSession({
+      userDb.createSession({
         id: `sess_${Date.now()}`,
         uid: user.uid,
         token,
@@ -1453,7 +1336,7 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       });
     }
   });
-  app.post("/api/interests/send", authenticateToken, async (req, res) => {
+  app.post("/api/interests/send", authenticateToken, (req, res) => {
     const { receiverId } = req.body;
     const senderId = req.user.uid;
     if (!receiverId) {
@@ -1462,16 +1345,15 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     if (senderId === receiverId) {
       return res.status(400).json({ error: "You cannot send an interest request to yourself." });
     }
-    const receiver = await userDb.findById(receiverId);
+    const receiver = userDb.findById(receiverId);
     if (!receiver) {
       return res.status(404).json({ error: "Target user profile not found." });
     }
-    const callerUser = await userDb.findById(senderId);
+    const callerUser = userDb.findById(senderId);
     if (callerUser?.blockedUsers?.includes(receiverId) || receiver.blockedUsers?.includes(senderId)) {
       return res.status(400).json({ error: "Cannot send interest request. One of the users has blocked the other." });
     }
-    const interests = await userDb.getInterests();
-    const existing = interests.find(
+    const existing = userDb.getInterests().find(
       (i) => i.senderId === senderId && i.receiverId === receiverId || i.senderId === receiverId && i.receiverId === senderId
     );
     if (existing) {
@@ -1484,66 +1366,63 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       status: "pending",
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await userDb.createInterest(interest);
+    userDb.createInterest(interest);
     res.json({ success: true, interest });
   });
-  app.post("/api/interests/respond", authenticateToken, async (req, res) => {
+  app.post("/api/interests/respond", authenticateToken, (req, res) => {
     const { interestId, status } = req.body;
     const callerId = req.user.uid;
     if (!interestId || !["accepted", "rejected"].includes(status)) {
       return res.status(400).json({ error: "Missing interestId or invalid response status." });
     }
-    const interests = await userDb.getInterests();
-    const interest = interests.find((i) => i.id === interestId);
+    const interest = userDb.getInterests().find((i) => i.id === interestId);
     if (!interest) {
       return res.status(404).json({ error: "Interest request record not found." });
     }
     if (interest.receiverId !== callerId) {
       return res.status(403).json({ error: "Permission denied. Only the recipient can respond to this request." });
     }
-    const success = await userDb.updateInterest(interestId, status);
+    const success = userDb.updateInterest(interestId, status);
     res.json({ success, status });
   });
-  app.get("/api/interests/my", authenticateToken, async (req, res) => {
+  app.get("/api/interests/my", authenticateToken, (req, res) => {
     const callerId = req.user.uid;
-    const interests = (await userDb.getInterests()).filter((i) => i.senderId === callerId || i.receiverId === callerId);
+    const interests = userDb.getInterests().filter((i) => i.senderId === callerId || i.receiverId === callerId);
     res.json({ success: true, interests });
   });
-  app.get("/api/messages", authenticateToken, async (req, res) => {
+  app.get("/api/messages", authenticateToken, (req, res) => {
     const { otherId } = req.query;
     const callerId = req.user.uid;
     if (!otherId || typeof otherId !== "string") {
       return res.status(400).json({ error: "Target query parameter otherId is required." });
     }
-    const interests = await userDb.getInterests();
-    const activeConsent = interests.some(
+    const activeConsent = userDb.getInterests().some(
       (i) => i.status === "accepted" && (i.senderId === callerId && i.receiverId === otherId || i.senderId === otherId && i.receiverId === callerId)
     );
-    const callerUser = await userDb.findById(callerId);
-    const otherUser = await userDb.findById(otherId);
+    const callerUser = userDb.findById(callerId);
+    const otherUser = userDb.findById(otherId);
     if (callerUser?.blockedUsers?.includes(otherId) || otherUser?.blockedUsers?.includes(callerId)) {
       return res.status(403).json({ error: "Chat locked. One of the users has blocked the other." });
     }
     if (!activeConsent && req.user.role !== "admin") {
       return res.status(403).json({ error: "Chat locked. You cannot retrieve messages until both users accept mutual interest." });
     }
-    const chatHistory = (await userDb.getMessages()).filter(
+    const chatHistory = userDb.getMessages().filter(
       (m) => m.senderId === callerId && m.receiverId === otherId || m.senderId === otherId && m.receiverId === callerId
     );
     res.json({ success: true, messages: chatHistory });
   });
-  app.post("/api/messages", authenticateToken, async (req, res) => {
+  app.post("/api/messages", authenticateToken, (req, res) => {
     const { receiverId, text } = req.body;
     const senderId = req.user.uid;
     if (!receiverId || !text) {
       return res.status(400).json({ error: "Missing receiverId or message text." });
     }
-    const interests = await userDb.getInterests();
-    const activeConsent = interests.some(
+    const activeConsent = userDb.getInterests().some(
       (i) => i.status === "accepted" && (i.senderId === senderId && i.receiverId === receiverId || i.senderId === receiverId && i.receiverId === senderId)
     );
-    const callerUser = await userDb.findById(senderId);
-    const otherUser = await userDb.findById(receiverId);
+    const callerUser = userDb.findById(senderId);
+    const otherUser = userDb.findById(receiverId);
     if (callerUser?.blockedUsers?.includes(receiverId) || otherUser?.blockedUsers?.includes(senderId)) {
       return res.status(403).json({ error: "Chat locked. One of the users has blocked the other." });
     }
@@ -1558,15 +1437,15 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       text: sanitizedText,
       timestamp: (/* @__PURE__ */ new Date()).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
     };
-    await userDb.createMessage(message);
+    userDb.createMessage(message);
   });
-  app.post("/api/users/block", authenticateToken, async (req, res) => {
+  app.post("/api/users/block", authenticateToken, (req, res) => {
     const { targetUserId } = req.body;
     const callerId = req.user.uid;
     if (!targetUserId) {
       return res.status(400).json({ error: "Target User ID is required." });
     }
-    const caller = await userDb.findById(callerId);
+    const caller = userDb.findById(callerId);
     if (!caller) {
       return res.status(404).json({ error: "Caller profile not found." });
     }
@@ -1577,24 +1456,24 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     } else {
       caller.blockedUsers = [...blockedUsers, targetUserId];
       isBlocked = true;
-      const interests = await userDb.getInterests();
+      const interests = userDb.getInterests();
       const interest = interests.find(
         (i) => i.senderId === callerId && i.receiverId === targetUserId || i.senderId === targetUserId && i.receiverId === callerId
       );
       if (interest) {
-        await userDb.updateInterest(interest.id, "rejected");
+        userDb.updateInterest(interest.id, "rejected");
       }
     }
-    await userDb.update(callerId, { blockedUsers: caller.blockedUsers });
+    userDb.update(callerId, { blockedUsers: caller.blockedUsers });
     res.json({ success: true, isBlocked, blockedUsers: caller.blockedUsers });
   });
-  app.post("/api/users/mute", authenticateToken, async (req, res) => {
+  app.post("/api/users/mute", authenticateToken, (req, res) => {
     const { targetUserId } = req.body;
     const callerId = req.user.uid;
     if (!targetUserId) {
       return res.status(400).json({ error: "Target User ID is required." });
     }
-    const caller = await userDb.findById(callerId);
+    const caller = userDb.findById(callerId);
     if (!caller) {
       return res.status(404).json({ error: "Caller profile not found." });
     }
@@ -1606,26 +1485,25 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       caller.mutedUsers = [...mutedUsers, targetUserId];
       isMuted = true;
     }
-    await userDb.update(callerId, { mutedUsers: caller.mutedUsers });
+    userDb.update(callerId, { mutedUsers: caller.mutedUsers });
     res.json({ success: true, isMuted, mutedUsers: caller.mutedUsers });
   });
-  app.post("/api/interests/unmatch", authenticateToken, async (req, res) => {
+  app.post("/api/interests/unmatch", authenticateToken, (req, res) => {
     const { targetUserId } = req.body;
     const callerId = req.user.uid;
     if (!targetUserId) {
       return res.status(400).json({ error: "Target User ID is required." });
     }
-    const interests = await userDb.getInterests();
-    const interest = interests.find(
+    const interest = userDb.getInterests().find(
       (i) => i.senderId === callerId && i.receiverId === targetUserId || i.senderId === targetUserId && i.receiverId === callerId
     );
     if (!interest) {
       return res.status(404).json({ error: "No active connection found with this user." });
     }
-    const success = await userDb.updateInterest(interest.id, "rejected");
+    const success = userDb.updateInterest(interest.id, "rejected");
     res.json({ success, status: "rejected" });
   });
-  app.post("/api/reports/create", authenticateToken, async (req, res) => {
+  app.post("/api/reports/create", authenticateToken, (req, res) => {
     const { reportedUserId, type, details } = req.body;
     const reporterId = req.user.uid;
     if (!reportedUserId || !type || !details) {
@@ -1640,11 +1518,11 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
       status: "pending",
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    await userDb.createReport(report);
+    userDb.createReport(report);
     res.json({ success: true, report });
   });
-  app.get("/api/admin/stats", authenticateToken, requireAdmin, async (req, res) => {
-    const allUsers = await userDb.getAll();
+  app.get("/api/admin/stats", authenticateToken, requireAdmin, (req, res) => {
+    const allUsers = userDb.getAll();
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const stats = {
       total: allUsers.length,
@@ -1658,22 +1536,22 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     };
     res.json({ success: true, stats });
   });
-  app.get("/api/admin/notifications", authenticateToken, requireAdmin, async (req, res) => {
-    const notifications = await userDb.getNotifications();
+  app.get("/api/admin/notifications", authenticateToken, requireAdmin, (req, res) => {
+    const notifications = userDb.getNotifications();
     const unreadCount = notifications.filter((n) => !n.read).length;
     res.json({ success: true, notifications, unreadCount });
   });
-  app.post("/api/admin/notifications/mark-read", authenticateToken, requireAdmin, async (req, res) => {
-    await userDb.markNotificationsRead();
+  app.post("/api/admin/notifications/mark-read", authenticateToken, requireAdmin, (req, res) => {
+    userDb.markNotificationsRead();
     res.json({ success: true });
   });
-  app.get("/api/admin/audit-logs", authenticateToken, requireAdmin, async (req, res) => {
-    const logs = await userDb.getAuditLogs();
+  app.get("/api/admin/audit-logs", authenticateToken, requireAdmin, (req, res) => {
+    const logs = userDb.getAuditLogs();
     res.json({ success: true, logs });
   });
-  app.get("/api/admin/interests", authenticateToken, requireAdmin, async (req, res) => {
-    const interests = await userDb.getInterests();
-    const allUsers = await userDb.getAll();
+  app.get("/api/admin/interests", authenticateToken, requireAdmin, (req, res) => {
+    const interests = userDb.getInterests();
+    const allUsers = userDb.getAll();
     const expanded = interests.map((i) => {
       const sender = allUsers.find((u) => u.uid === i.senderId);
       const receiver = allUsers.find((u) => u.uid === i.receiverId);
@@ -1687,9 +1565,9 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     });
     res.json({ success: true, interests: expanded });
   });
-  app.get("/api/admin/reports", authenticateToken, requireAdmin, async (req, res) => {
-    const reports = await userDb.getReports();
-    const allUsers = await userDb.getAll();
+  app.get("/api/admin/reports", authenticateToken, requireAdmin, (req, res) => {
+    const reports = userDb.getReports();
+    const allUsers = userDb.getAll();
     const expanded = reports.map((r) => {
       const reporter = allUsers.find((u) => u.uid === r.reporterId);
       const reported = allUsers.find((u) => u.uid === r.reportedUserId);
@@ -1704,17 +1582,17 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     });
     res.json({ success: true, reports: expanded });
   });
-  app.post("/api/admin/reports/resolve", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/reports/resolve", authenticateToken, requireAdmin, (req, res) => {
     const { reportId, status } = req.body;
     if (!reportId || !["pending", "resolved", "dismissed"].includes(status)) {
       return res.status(400).json({ error: "Missing reportId or invalid resolution status." });
     }
-    const success = await userDb.updateReportStatus(reportId, status);
+    const success = userDb.updateReportStatus(reportId, status);
     res.json({ success });
   });
-  app.get("/api/admin/chats", authenticateToken, requireAdmin, async (req, res) => {
-    const messages = await userDb.getMessages();
-    const allUsers = await userDb.getAll();
+  app.get("/api/admin/chats", authenticateToken, requireAdmin, (req, res) => {
+    const messages = userDb.getMessages();
+    const allUsers = userDb.getAll();
     const conversationsMap = /* @__PURE__ */ new Map();
     messages.forEach((m) => {
       const pair = [m.senderId, m.receiverId].sort();
@@ -1752,12 +1630,12 @@ This OTP is valid for 5 minutes. If you did not request this, please ignore this
     const sessions = await userDb.getSessions();
     res.json({ success: true, sessions });
   });
-  app.post("/api/admin/sessions/revoke", authenticateToken, requireAdmin, async (req, res) => {
+  app.post("/api/admin/sessions/revoke", authenticateToken, requireAdmin, (req, res) => {
     const { token } = req.body;
     if (!token) {
       return res.status(400).json({ error: "Missing token parameter to revoke." });
     }
-    const revoked = await userDb.revokeSession(token);
+    const revoked = userDb.revokeSession(token);
     res.json({ success: revoked });
   });
   app.post("/api/send-notification", (req, res) => {
